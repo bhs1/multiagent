@@ -72,9 +72,42 @@ class ReflexAgent(Agent):
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        newGhostPositions = successorGameState.getGhostPositions()
+
+        DEBUG = False
+        
+        if DEBUG: print "Is win state:", successorGameState.isWin()
+
+        if (successorGameState.isWin()):
+            if DEBUG: print "Score: 2000"
+            return 2000
+
+        if DEBUG: print "Is lose state:", successorGameState.isLose()
+
+        # Move into helper function for testing death
+        if (successorGameState.isLose()):
+            if DEBUG: print "Score: -2000"
+            return -2000
+
+        score = successorGameState.getScore()
+
+        # take into account scared ghosts separately
+        minManhattanGhost = min(map(lambda ghost: manhattanDistance(newPos, ghost.getPosition()), newGhostStates))
+        MAX = 4
+        score -= 10*(MAX - min(minManhattanGhost, MAX))
+
+        if DEBUG: print "Minimum distance to ghost:", minManhattanGhost
+
+        minManhattanFood = min(map(lambda food: manhattanDistance(newPos, food), newFood.asList()))
+        score += 10 / minManhattanFood
+
+        if DEBUG: print "Minimum distance to food:", minManhattanFood
+
+        if DEBUG: print "Score:", score
+
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        return score
 
 def scoreEvaluationFunction(currentGameState):
     """
