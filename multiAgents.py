@@ -161,9 +161,40 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
 
+        
+        actions = gameState.getLegalActions(0)
+        maxAction = actions[0]
+        maxSoFar = self.getValue(gameState.generateSuccessor(0,maxAction),1)
+        for action in actions[1:]:
+            val = self.getValue(gameState.generateSuccessor(0,action),1)
+            if val > maxSoFar:
+                maxAction = action
+                maxSoFar = val
+        print "Final:", maxSoFar
+        return maxAction
+        
+    def getValue(self, gameState, curDepth, indent=""):
+        DEBUG = False
+        numAgents = gameState.getNumAgents()
+        curAgent = curDepth % numAgents
+        if DEBUG: print indent, "-------------------------"
+        if DEBUG: print indent,"depth",self.depth 
+        if DEBUG: print indent,"curAgent",curAgent
+        if DEBUG: print indent,"numAgents",numAgents
+        if DEBUG: print indent,gameState.getLegalActions()
+        #        print indent, gameState,curAgent
+
+        if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions()) == 0:
+            if DEBUG: print indent, self.evaluationFunction(gameState)
+            return self.evaluationFunction(gameState)
+        if (curAgent == 0):
+            if DEBUG: print indent,"max:"
+            return max(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "),gameState.getLegalActions(curAgent)))
+        else:
+            if DEBUG: print indent,"min:"
+            return min(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "),gameState.getLegalActions(curAgent)))
+        
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
       Your minimax agent with alpha-beta pruning (question 3)
