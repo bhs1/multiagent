@@ -173,20 +173,20 @@ better = betterEvaluationFunction
 
 class ContestAgent(MultiAgentSearchAgent):
     """
-      Your agent for the mini-contest
+    Your agent for the mini-contest
     """
             
     def getAction(self, gameState):
-    """
-      Returns an action.  You can use any method you want and search to any depth you want.
-      Just remember that the mini-contest is timed, so you have to trade off speed and computation.
+        """
+        Returns an action.  You can use any method you want and search to any depth you want.
+        Just remember that the mini-contest is timed, so you have to trade off speed and computation.
               
-      Ghosts don't behave randomly anymore, but they aren't perfect either -- they'll usually
+        Ghosts don't behave randomly anymore, but they aren't perfect either -- they'll usually
       just make a beeline straight towards Pacman (or away from him if they're scared!)
-    """
+      """
 
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+        "*** YOUR CODE HERE ***"
+        util.raiseNotDefined()
 
 
 
