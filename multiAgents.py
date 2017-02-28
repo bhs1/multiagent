@@ -162,7 +162,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
             Returns the total number of agents in the game
         """
 
-        
+        DEBUG = False
         actions = gameState.getLegalActions(0)
         maxAction = actions[0]
         maxSoFar = self.getValue(gameState.generateSuccessor(0,maxAction),1)
@@ -171,7 +171,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
             if val > maxSoFar:
                 maxAction = action
                 maxSoFar = val
-        print "Final:", maxSoFar
+        if DEBUG: print "Final:", maxSoFar
         return maxAction
         
     def getValue(self, gameState, curDepth, indent=""):
@@ -182,10 +182,10 @@ class MinimaxAgent(MultiAgentSearchAgent):
         if DEBUG: print indent,"depth",self.depth 
         if DEBUG: print indent,"curAgent",curAgent
         if DEBUG: print indent,"numAgents",numAgents
-        if DEBUG: print indent,gameState.getLegalActions()
+        if DEBUG: print indent,gameState.getLegalActions(curAgent)
         #        print indent, gameState,curAgent
 
-        if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions()) == 0:
+        if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
             if DEBUG: print indent, self.evaluationFunction(gameState)
             return self.evaluationFunction(gameState)
         if (curAgent == 0):
@@ -205,7 +205,60 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        DEBUG = True
+        actions = gameState.getLegalActions(0)
+        maxAction = actions[0]
+        self.alpha = float("-inf")
+        self.beta = float("inf")
+        if DEBUG: print "alpha", self.alpha
+        if DEBUG: print "beta", self.beta
+        maxSoFar = self.getValue(gameState.generateSuccessor(0,maxAction),1)
+
+        for action in actions[1:]:
+            if DEBUG: print "alpha", self.alpha
+            if DEBUG: print "beta", self.beta
+            val = self.getValue(gameState.generateSuccessor(0,action),1)
+            if val > maxSoFar:
+                maxAction = action
+                maxSoFar = val
+            if val > self.beta: 
+                if DEBUG: print "Final:", maxSoFar
+                return maxAction
+            else: self.alpha = max(self.alpha, val)
+
+        return maxAction
+        
+    def getValue(self, gameState, curDepth, indent=""):
+        DEBUG = True
+        numAgents = gameState.getNumAgents()
+        curAgent = curDepth % numAgents
+        if DEBUG: print indent, "-------------------------"
+        if DEBUG: print indent, "alpha", self.alpha
+        if DEBUG: print indent, "beta", self.beta
+        if DEBUG: print indent,"depth",self.depth 
+        if DEBUG: print indent,"curAgent",curAgent
+        if DEBUG: print indent,"numAgents",numAgents
+        if DEBUG: print indent,gameState.getLegalActions(curAgent)
+        #        print indent, gameState,curAgent
+
+        if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
+            if DEBUG: print indent, self.evaluationFunction(gameState)
+            return self.evaluationFunction(gameState)
+        if (curAgent == 0):
+            if DEBUG: print indent,"max:"
+            val = float("-inf")
+            for action in gameState.getLegalActions(curAgent):
+                val = max(val, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "))
+                if val > self.beta: return val
+                else: self.alpha = max(self.alpha, val)
+        else:
+            if DEBUG: print indent,"min:"
+            val = float("inf")
+            for action in gameState.getLegalActions(curAgent):
+                val = min(val, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "))
+                if val < self.alpha: return val
+                else: self.beta = min(self.beta, val)
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
