@@ -161,39 +161,19 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
+        return self.getValue(gameState,0)[0]
 
-        DEBUG = False
-        actions = gameState.getLegalActions(0)
-        maxAction = actions[0]
-        maxSoFar = self.getValue(gameState.generateSuccessor(0,maxAction),1)
-        for action in actions[1:]:
-            val = self.getValue(gameState.generateSuccessor(0,action),1)
-            if val > maxSoFar:
-                maxAction = action
-                maxSoFar = val
-        if DEBUG: print "Final:", maxSoFar
-        return maxAction
-        
+
+    
     def getValue(self, gameState, curDepth, indent=""):
-        DEBUG = False
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
-        if DEBUG: print indent, "-------------------------"
-        if DEBUG: print indent,"depth",self.depth 
-        if DEBUG: print indent,"curAgent",curAgent
-        if DEBUG: print indent,"numAgents",numAgents
-        if DEBUG: print indent,gameState.getLegalActions(curAgent)
-        #        print indent, gameState,curAgent
-
         if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
-            if DEBUG: print indent, self.evaluationFunction(gameState)
-            return self.evaluationFunction(gameState)
+            return (None, self.evaluationFunction(gameState))
         if (curAgent == 0):
-            if DEBUG: print indent,"max:"
-            return max(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "),gameState.getLegalActions(curAgent)))
+            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
         else:
-            if DEBUG: print indent,"min:"
-            return min(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "),gameState.getLegalActions(curAgent)))
+            return min(map(lambda action: (action, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)), key = lambda x: x[1])
         
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -285,6 +265,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     if DEBUG: print indent, "beta:     ", beta
             return val #(?)
 
+from numpy import mean
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
@@ -297,9 +278,18 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           All ghosts should be modeled as choosing uniformly at random from their
           legal moves.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.getValue(gameState, 0)[0]
 
+    def getValue(self, gameState, curDepth, indent=""):
+        numAgents = gameState.getNumAgents()
+        curAgent = curDepth % numAgents
+        if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
+            return (None, self.evaluationFunction(gameState))
+        if (curAgent == 0):
+            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
+        else:
+            return (None, mean(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1],gameState.getLegalActions(curAgent))))
+        
 def betterEvaluationFunction(currentGameState):
     """
       Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
