@@ -206,59 +206,84 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
 
-        DEBUG = True
+        DEBUG = False
         actions = gameState.getLegalActions(0)
         maxAction = actions[0]
-        self.alpha = float("-inf")
-        self.beta = float("inf")
-        if DEBUG: print "alpha", self.alpha
-        if DEBUG: print "beta", self.beta
-        maxSoFar = self.getValue(gameState.generateSuccessor(0,maxAction),1)
+        alpha = float("-inf")
+        beta = float("inf")
+        maxSoFar = float("-inf")#self.getValue(gameState.generateSuccessor(0,maxAction),1)
 
-        for action in actions[1:]:
-            if DEBUG: print "alpha", self.alpha
-            if DEBUG: print "beta", self.beta
-            val = self.getValue(gameState.generateSuccessor(0,action),1)
+        if DEBUG: print "-------------------------"
+        if DEBUG: print "alpha", alpha
+        if DEBUG: print "beta", beta
+        if DEBUG: print "depth", 0 
+        if DEBUG: print "curAgent", 0
+        if DEBUG: print "numAgents",gameState.getNumAgents()
+        if DEBUG: print actions
+        if DEBUG: print "max:"
+        for action in actions:
+            val = self.getValue(gameState.generateSuccessor(0,action), 1, alpha, beta)
             if val > maxSoFar:
                 maxAction = action
                 maxSoFar = val
-            if val > self.beta: 
+            if val > beta: 
                 if DEBUG: print "Final:", maxSoFar
                 return maxAction
-            else: self.alpha = max(self.alpha, val)
+            else: alpha = max(alpha, val)
 
         return maxAction
         
-    def getValue(self, gameState, curDepth, indent=""):
-        DEBUG = True
+    def getValue(self, gameState, curDepth, alpha, beta, indent=""):
+        DEBUG = False
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
         if DEBUG: print indent, "-------------------------"
-        if DEBUG: print indent, "alpha", self.alpha
-        if DEBUG: print indent, "beta", self.beta
-        if DEBUG: print indent,"depth",self.depth 
-        if DEBUG: print indent,"curAgent",curAgent
-        if DEBUG: print indent,"numAgents",numAgents
-        if DEBUG: print indent,gameState.getLegalActions(curAgent)
+        if DEBUG: print indent, "alpha:    ", alpha
+        if DEBUG: print indent, "beta:     ", beta
+        if DEBUG: print indent, "depth:    ", self.depth 
+        if DEBUG: print indent, "curAgent: ", curAgent
+        if DEBUG: print indent, "numAgents:", numAgents
+
         #        print indent, gameState,curAgent
 
-        if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
-            if DEBUG: print indent, self.evaluationFunction(gameState)
-            return self.evaluationFunction(gameState)
+        actions = gameState.getLegalActions(curAgent)
+        if DEBUG: print indent, "actions:  ", actions
+
+        if (curDepth == self.depth*numAgents)  or len(actions) == 0:
+            val = self.evaluationFunction(gameState)
+            if DEBUG: print indent, "value:    ", self.evaluationFunction(gameState)
+            return float(val)
+
         if (curAgent == 0):
             if DEBUG: print indent,"max:"
             val = float("-inf")
-            for action in gameState.getLegalActions(curAgent):
-                val = max(val, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "))
-                if val > self.beta: return val
-                else: self.alpha = max(self.alpha, val)
+            for action in actions:
+                newVal = self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, alpha, beta, indent + "  ")
+                if DEBUG: print indent, "newVal:   ", newVal
+                val = max(val, newVal)
+                if val > beta: 
+                    if DEBUG: print indent, "max:      ", val
+                    return val
+                else: 
+                    alpha = max(alpha, val)
+                    if DEBUG: print indent, "alpha:    ", alpha
+                    if DEBUG: print indent, "beta:     ", beta
+            return val #(?)
         else:
             if DEBUG: print indent,"min:"
             val = float("inf")
-            for action in gameState.getLegalActions(curAgent):
-                val = min(val, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  "))
-                if val < self.alpha: return val
-                else: self.beta = min(self.beta, val)
+            for action in actions:
+                newVal = self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, alpha, beta, indent + "  ")
+                if DEBUG: print indent, "newVal:   ", newVal
+                val = min(val, newVal)
+                if val < alpha: 
+                    if DEBUG: print indent, "min:      ", val
+                    return val
+                else: 
+                    beta = min(beta, val)
+                    if DEBUG: print indent, "alpha:    ", alpha
+                    if DEBUG: print indent, "beta:     ", beta
+            return val #(?)
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
