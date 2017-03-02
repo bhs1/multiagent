@@ -14,7 +14,7 @@
 
 from util import manhattanDistance
 from game import Directions
-import random, util
+import random, util, itertools
 
 from game import Agent
 
@@ -332,8 +332,8 @@ def betterEvaluationFunction(currentGameState):
     if len(badGhosts) > 0:
         minManhattanBadGhost = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts))
         if DEBUG: print "Minimum distance to bad ghost:", minManhattanBadGhost
-        MAX = 4
-        badGhostFeature = 1 / float(min(minManhattanBadGhost, MAX))
+        if minManhattanBadGhost < 8:
+            badGhostFeature = 1 / float(minManhattanBadGhost)
     
     ######## SCARED GHOST FEATURE #########
     ####### EAT GHOST FEATURE #############
@@ -358,6 +358,12 @@ def betterEvaluationFunction(currentGameState):
     if DEBUG: print "Minimum distance to food:", minDistToFood
     minFoodFeature =  1 / float(minDistToFood)
 
+    ####### LOWER BOUND DIST TO GOAL ########
+    distLowerBound = foodHeuristic(currentGameState)
+    if DEBUG: print "Lower bound distance to goal:", distLowerBound
+    distBoundFeature =  1 / float(distLowerBound)
+    
+
     ######## CAPSULE FEATURE #############
     # should make capsule worth even more if bad ghost is close (but not too close)
     capsuleFeature = 0
@@ -369,7 +375,7 @@ def betterEvaluationFunction(currentGameState):
     
     ######## NUM FOOD FEATUER ############
     numFood = currentGameState.getNumFood()
-    numFoodFeature = 1 / float(numFood)
+    numFoodFeature = numFood
     if DEBUG: print "Number of food left:", numFood
 
     # THOUGHTS:
@@ -391,15 +397,16 @@ def betterEvaluationFunction(currentGameState):
 
     weightedSum = (  1     * scoreFeature 
 
-                     + 20  * maxFoodFeature
-                     + 30  * minFoodFeature
-                     + 80  * numFoodFeature
+                     #+ 20  * maxFoodFeature
+                     #+ 30  * minFoodFeature
+                     +   1  * distBoundFeature
+                     -   1  * numFoodFeature
 
-                     + 100  * capsuleFeature
-                     + 15  * scaredGhostFeature
-                     + 300  * eatGhostFeature
+                     #+ 100  * capsuleFeature
+                     #+ 15  * scaredGhostFeature
+                     #+ 300  * eatGhostFeature
 
-                     - 1000  * badGhostFeature 
+                     - 60  * badGhostFeature 
                      )
 
     # if you want to minimize something, return positive inverse (which feature already is)
@@ -443,7 +450,7 @@ class ContestAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
-'''def foodHeuristic(state, problem):
+def foodHeuristic(state):
     """
     Your heuristic for the FoodSearchProblem goes here.
 
@@ -473,7 +480,11 @@ class ContestAgent(MultiAgentSearchAgent):
     """
 
     # Fetch state.
-    position, foodGrid = state
+    #position = state.
+    position = state.getPacmanPosition()
+    foodGrid = state.getFood()
+
+    #position, foodGrid = state
     foods = foodGrid.asList()
 
     # If there's no food left, return 0.
@@ -511,5 +522,4 @@ class ContestAgent(MultiAgentSearchAgent):
 
     # Return the sum of the distances in the MST (plus the distance to the closest node).
     return dist
-'''
 
