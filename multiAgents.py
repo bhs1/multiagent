@@ -299,45 +299,129 @@ def betterEvaluationFunction(currentGameState):
     """
 
     # Useful information you can extract from a GameState (pacman.py)
-    successorGameState = currentGameState.generatePacmanSuccessor(action)
-    newPos = successorGameState.getPacmanPosition()
-    newFood = successorGameState.getFood()
-    newGhostStates = successorGameState.getGhostStates()
-    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-    newGhostPositions = successorGameState.getGhostPositions()
-    
+    pos = currentGameState.getPacmanPosition()
+    food = currentGameState.getFood()
+    ghostStates = currentGameState.getGhostStates()
+    scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
+    badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer == 0]
+    nearbyScaredGhosts = [ghostState for ghostState in ghostStates 
+                          if ((ghostState.scaredTimer > 0) 
+                              and (manhattanDistance(pos, ghostState.getPosition()) < ghostState.scaredTimer))]
+    capsules = currentGameState.getCapsules();
+
     DEBUG = False
     
-    if DEBUG: print "Is win state:", successorGameState.isWin()
+    if DEBUG: print "___________________________________________"
+    if DEBUG: print "Is win state:", currentGameState.isWin()
+    if (currentGameState.isWin()):
+        if DEBUG: print "Score: 10000"
+        return 20000
 
-    if (successorGameState.isWin()):
-        if DEBUG: print "Score: 2000"
-        return 2000
-
-    if DEBUG: print "Is lose state:", successorGameState.isLose()
-
+    if DEBUG: print "Is lose state:", currentGameState.isLose()
     # Move into helper function for testing death
-    if (successorGameState.isLose()):
-        if DEBUG: print "Score: -2000"
-        return -2000
+    if (currentGameState.isLose()):
+        if DEBUG: print "Score: -10000"
+        return -20000
 
-    score = successorGameState.getScore()
+
+    ######## SCORE FEATURE ##########
+    scoreFeature = currentGameState.getScore()
+
+    ######## BAD GHOST FEATURE #########
+    badGhostFeature = 0
+    if len(badGhosts) > 0:
+        minManhattanBadGhost = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts))
+        if DEBUG: print "Minimum distance to bad ghost:", minManhattanBadGhost
+        MAX = 4
+        badGhostFeature = 1 / float(min(minManhattanBadGhost, MAX))
     
-    # take into account scared ghosts separately
-    minManhattanGhost = min(map(lambda ghost: manhattanDistance(newPos, ghost.getPosition()), newGhostStates))
-    MAX = 4
-    score -= 10*(MAX - min(minManhattanGhost, MAX))
+    ######## SCARED GHOST FEATURE #########
+    ####### EAT GHOST FEATURE #############
+    # add in try-catch
+    scaredGhostFeature = 0
+    eatGhostFeature = 0
+    if len(nearbyScaredGhosts) > 0:
+        minManhattanScaredGhost = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
+        if DEBUG: print "Minimum distance to scared ghost:", minManhattanScaredGhost
+        scaredGhostFeature = 1 / float(minManhattanScaredGhost)
+        if minManhattanScaredGhost < 3:
+            eatGhostFeature = 1 / float(minManhattanScaredGhost)
 
-    if DEBUG: print "Minimum distance to ghost:", minManhattanGhost
 
-    minManhattanFood = min(map(lambda food: manhattanDistance(newPos, food), newFood.asList()))
-    score += 10 / minManhattanFood
+    ######## MAX FOOD FEATURE #############
+    maxDistToFood = max(map(lambda f: manhattanDistance(pos, f), food.asList()))
+    if DEBUG: print "Maximum distance to food:", maxDistToFood
+    maxFoodFeature =  1 / float(maxDistToFood)
 
-    if DEBUG: print "Minimum distance to food:", minManhattanFood
+    ######## MIN FOOD FEATURE #############
+    minDistToFood = min(map(lambda f: manhattanDistance(pos, f), food.asList()))
+    if DEBUG: print "Minimum distance to food:", minDistToFood
+    minFoodFeature =  1 / float(minDistToFood)
 
-    if DEBUG: print "Score:", score
+    ######## CAPSULE FEATURE #############
+    # should make capsule worth even more if bad ghost is close (but not too close)
+    capsuleFeature = 0
+    if len(capsules) > 0:
+        minDistToCapsule = min(map(lambda cap: manhattanDistance(pos, cap), capsules))
+        if DEBUG: print "Minimum distance to capsule:", minDistToCapsule
+        MAX = 6
+        capsuleFeature =  1 / float(max(minDistToCapsule, MAX))
     
-    return score
+    ######## NUM FOOD FEATUER ############
+    numFood = currentGameState.getNumFood()
+    numFoodFeature = 1 / float(numFood)
+    if DEBUG: print "Number of food left:", numFood
+
+    # THOUGHTS:
+    #
+    # want to minimize maximum distance to food
+    #
+    # if maximum distance to food is same, want to minimize distance to food
+    #
+    # if maximum distance to food is same, and minimum distance to food is same, 
+    # want to minimize number of food
+    #
+    # it should be more important to minimize number of food than keep max food distance the same
+    #
+    # score increases by almost 10 for eating a food so everything should be contributing at least twice that
+    # 
+    # need to capture more in the min dist to scaredghost - not enough
+    # because eating the ghost actually increases the min dist
+    # so if min dist is 1, actually want to return something even higher
+
+    weightedSum = (  1     * scoreFeature 
+
+                     + 20  * maxFoodFeature
+                     + 30  * minFoodFeature
+                     + 80  * numFoodFeature
+
+                     + 100  * capsuleFeature
+                     + 15  * scaredGhostFeature
+                     + 300  * eatGhostFeature
+
+                     - 1000  * badGhostFeature 
+                     )
+
+    # if you want to minimize something, return positive inverse (which feature already is)
+    # if you care more about minimizing one thing than the other multiply it by more
+
+    if DEBUG:
+        print "Weighted Score Feature:       ", 1   * scoreFeature
+        print ""
+        print "Weighted Max Food Feature:    ", 20 * maxFoodFeature
+        print "Weighted Min Food Feature:    ", 30 * minFoodFeature
+        print "Weighted Num Food Feature:    ", 90 * numFoodFeature
+        print ""
+        print "Weighted Capsule Feature:     ", 40 * capsuleFeature
+        print "Weighted Scared Ghost Feature:", 50 * scaredGhostFeature
+        print "Weighted Eat Ghost Feature:   ", 200 * eatGhostFeature        
+        print ""
+        print "Weighted Bad Ghost Feature:   ", -500 * badGhostFeature
+        print ""
+        print "Total sum:                    ", weightedSum 
+        print ""
+
+    return weightedSum
 
 # Abbreviation
 better = betterEvaluationFunction
