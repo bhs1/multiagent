@@ -359,5 +359,73 @@ class ContestAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
+'''def foodHeuristic(state, problem):
+    """
+    Your heuristic for the FoodSearchProblem goes here.
 
+    This heuristic must be consistent to ensure correctness.  First, try to come
+    up with an admissible heuristic; almost all admissible heuristics will be
+    consistent as well.
+
+    If using A* ever finds a solution that is worse uniform cost search finds,
+    your heuristic is *not* consistent, and probably not admissible!  On the
+    other hand, inadmissible or inconsistent heuristics may find optimal
+    solutions, so be careful.
+
+    The state is a tuple ( pacmanPosition, foodGrid ) where foodGrid is a Grid
+    (see game.py) of either True or False. You can call foodGrid.asList() to get
+    a list of food coordinates instead.
+
+    If you want access to info like walls, capsules, etc., you can query the
+    problem.  For example, problem.walls gives you a Grid of where the walls
+    are.
+
+    If you want to *store* information to be reused in other calls to the
+    heuristic, there is a dictionary called problem.heuristicInfo that you can
+    use. For example, if you only want to count the walls once and store that
+    value, try: problem.heuristicInfo['wallCount'] = problem.walls.count()
+    Subsequent calls to this heuristic can access
+    problem.heuristicInfo['wallCount']
+    """
+
+    # Fetch state.
+    position, foodGrid = state
+    foods = foodGrid.asList()
+
+    # If there's no food left, return 0.
+    if len(foods) == 0:
+        return 0
+    
+    # Create a graph from the food state.
+    G = []
+    V = len(foods)
+    for ((i, food1), (j, food2)) in itertools.combinations(enumerate(foods), 2):
+        G.append((i, j, util.manhattanDistance(foods[i], foods[j])))
+        
+    # Initialize the distance to be the distance to the closest food.
+    dist = min(map(lambda food: util.manhattanDistance(position,food), foods))
+
+    # Kruskal's algorithm for finding minimum-cost spanning tree.
+    # See pseudocode at https://en.wikipedia.org/wiki/Kruskal's_algorithm
+    parent = dict()
+    rank = dict()
+
+    # Make unique set ("subtree") for each node to start.
+    for node in range(V):
+        parent[node] = node
+        rank[node] = 0
+
+    # Sort the edges in non-decreasing order by weight.
+    G.sort(key = lambda edge: edge[2])
+    
+    # Keep adding shortest edges and unioning disjoint "trees" until
+    # spanning tree is found.
+    for (src, dest, weight) in G:
+        if find(src, parent) != find(dest, parent):
+            union(src, dest, rank, parent)
+            dist += weight # Remember, we just want to sum the edge weights.
+
+    # Return the sum of the distances in the MST (plus the distance to the closest node).
+    return dist
+'''
 
