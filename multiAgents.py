@@ -513,3 +513,26 @@ class ContestAgent(MultiAgentSearchAgent):
     return dist
 '''
 
+def find(node, parent):
+    """
+    The find function for Union-Find in Kruskal's algorithm (path compression).
+    See pseudocode at https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+    """
+    if parent[node] != node:
+        parent[node] = find(parent[node], parent)
+    return parent[node]
+
+def union(node1, node2, rank, parent):
+    """
+    The union function for Union-Find in Kruskal's algorithm.
+    See pseudocode at https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+    """
+    root1 = find(node1, parent)
+    root2 = find(node2, parent)
+    if root1 != root2:
+        if rank[root1] > rank[root2]:
+            parent[root2] = root1
+        else:
+            parent[root1] = root2
+            if rank[root1] == rank[root2]:
+                rank[root2] += 1
