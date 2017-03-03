@@ -398,10 +398,7 @@ def betterEvaluationFunction(currentGameState):
 
     # BAD GHOST FEATURE
     # Bad ghosts are bad, run away!
-    # Our main priority is getting away from reall close ghosts,
-    # but increasing distances to all ghosts is also ideal.
     minBadGhostFeature = 0
-    sumBadGhostFeature = 0
 
     if len(badGhosts) > 0:
         # If a ghost is really close, take the time to compute the actual 
@@ -412,12 +409,9 @@ def betterEvaluationFunction(currentGameState):
                 badGhosts.add((ghost, searchAgents.mazeDistance(pos, tuple(map(int,ghost.getPosition())), currentGameState)))
 
         minBadGhostDist = min(badGhosts, key = lambda x: x[1])[1]
-        sumBadGhostDist = sum(map(lambda x: x[1], badGhosts))
 
-        if minBadGhostDist < 5:
+        if minBadGhostDist < 4:
             minBadGhostFeature = 1 / float(1 + minBadGhostDist)
-        if sumBadGhostDist < 8:
-            sumBadGhostFeature = 1 / float(1 + sumBadGhostDist)
 
 
     # WALL FEATURE
@@ -454,11 +448,10 @@ def betterEvaluationFunction(currentGameState):
     # WEIGHTED SUM OF FEATURES
     # Some features are more important than others.
     return ( 1      * winFeature
-             + 20   * goalBoundFeature
+             + 30   * goalBoundFeature
              + 300  * capsuleFeature 
-             + 150  * scaredGhostFeature
+             + 200  * scaredGhostFeature
              - 200  * minBadGhostFeature 
-             - 40   * sumBadGhostFeature 
              - 40   * ghostHouseFeature 
              - 30   * lineFeature
              - 3    * wallsFeature
