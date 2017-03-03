@@ -75,36 +75,26 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
         newGhostPositions = successorGameState.getGhostPositions()
 
-        DEBUG = False
-        
-        if DEBUG: print "Is win state:", successorGameState.isWin()
-
+        # Big reward for a win (bigger in magnitude than any nonloss score)
         if (successorGameState.isWin()):
-            if DEBUG: print "Score: 2000"
             return 2000
-
-        if DEBUG: print "Is lose state:", successorGameState.isLose()
-
-        # Move into helper function for testing death
+        
+        # Big penalty for a loss (bigger in magnitude than any nonloss score)
         if (successorGameState.isLose()):
-            if DEBUG: print "Score: -2000"
             return -2000
 
+        # Simple pacman like higher scores
         score = successorGameState.getScore()
 
-        # take into account scared ghosts separately
+        # Stay away from ghosts if they are nearby (within 4 manhattan distance. Otherwise focus on eating
         minManhattanGhost = min(map(lambda ghost: manhattanDistance(newPos, ghost.getPosition()), newGhostStates))
+        
         MAX = 4
-        score -= 10*(MAX - min(minManhattanGhost, MAX))
+        score -= 10*(MAX - min(minManhattanGhost, MAX))        
 
-        if DEBUG: print "Minimum distance to ghost:", minManhattanGhost
-
+        # Go toward the nearest food
         minManhattanFood = min(map(lambda food: manhattanDistance(newPos, food), newFood.asList()))
         score += 10 / minManhattanFood
-
-        if DEBUG: print "Minimum distance to food:", minManhattanFood
-
-        if DEBUG: print "Score:", score
 
         return score
 
