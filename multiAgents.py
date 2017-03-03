@@ -182,86 +182,59 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
           Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
 
-        DEBUG = False
-        actions = gameState.getLegalActions(0)
-        maxAction = actions[0]
-        alpha = float("-inf")
-        beta = float("inf")
-        maxSoFar = float("-inf")#self.getValue(gameState.generateSuccessor(0,maxAction),1)
-
-        if DEBUG: print "-------------------------"
-        if DEBUG: print "alpha", alpha
-        if DEBUG: print "beta", beta
-        if DEBUG: print "depth", 0 
-        if DEBUG: print "curAgent", 0
-        if DEBUG: print "numAgents",gameState.getNumAgents()
-        if DEBUG: print actions
-        if DEBUG: print "max:"
-        for action in actions:
-            val = self.getValue(gameState.generateSuccessor(0,action), 1, alpha, beta)
-            if val > maxSoFar:
-                maxAction = action
-                maxSoFar = val
-            if val > beta: 
-                if DEBUG: print "Final:", maxSoFar
-                return maxAction
-            else: alpha = max(alpha, val)
-
-        return maxAction
-        
-    def getValue(self, gameState, curDepth, alpha, beta, indent=""):
-        DEBUG = False
+        # To start, the best pacman can do is -inf and best ghosts can do
+        # is inf. They will very quickly overwrite these values
+        # The method return an (action, value) tuple so we return [0], the action
+        return self.getValue(gameState,0,float("-inf"),float("inf"))[0]
+    
+    def getValue(self, gameState, curDepth, alpha, beta):
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
-        if DEBUG: print indent, "-------------------------"
-        if DEBUG: print indent, "alpha:    ", alpha
-        if DEBUG: print indent, "beta:     ", beta
-        if DEBUG: print indent, "depth:    ", self.depth 
-        if DEBUG: print indent, "curAgent: ", curAgent
-        if DEBUG: print indent, "numAgents:", numAgents
-
-        #        print indent, gameState,curAgent
-
-        actions = gameState.getLegalActions(curAgent)
-        if DEBUG: print indent, "actions:  ", actions
+        actions = gameState.getLegalActions(curAgent)        
 
         if (curDepth == self.depth*numAgents)  or len(actions) == 0:
+            # If we've reached a terminal state or the depth specified in
+            # self.depth, just evaluate the current terminal/leaf state       
             val = self.evaluationFunction(gameState)
-            if DEBUG: print indent, "value:    ", self.evaluationFunction(gameState)
-            return float(val)
+            return (None, float(val))
 
         if (curAgent == 0):
-            if DEBUG: print indent,"max:"
-            val = float("-inf")
+            bestVal = float("-inf")
+            bestAction = None
+            # Go over all actions and find the best keeping track of whether
+            # you can do better than the best value the minimizer already is
+            # gauranteed. If so, prune because we will never get to this
+            # branch since the minimizer will go to a different one. Also,
+            # keep track of the best we can do and use it to update alpha
+            # (may not be better of course)
             for action in actions:
-                newVal = self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, alpha, beta, indent + "  ")
-                if DEBUG: print indent, "newVal:   ", newVal
-                val = max(val, newVal)
-                if val > beta: 
-                    if DEBUG: print indent, "max:      ", val
-                    return val
+                newVal = self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, alpha, beta)[1]
+                if newVal > bestVal:
+                    (bestVal,bestAction) = (newVal,action)
+                if bestVal > beta: 
+                    return (bestAction,bestVal)
                 else: 
-                    alpha = max(alpha, val)
-                    if DEBUG: print indent, "alpha:    ", alpha
-                    if DEBUG: print indent, "beta:     ", beta
-            return val #(?)
+                    alpha = max(alpha, bestVal)
+            return (bestAction,bestVal)
         else:
-            if DEBUG: print indent,"min:"
-            val = float("inf")
+            # The minimizer does the oppsotive of the maximizer but since we
+            # are the maximizer, we don't care about the action it takes.
+            # If the minimizer finds a value less than the best the maximizer
+            # is already gauranteed, prune because we will never visit this
+            # branch since the maximizer is smart! Update beta with the
+            # smallest value we can find (may not be better of course). 
+            bestVal = float("inf")
             for action in actions:
-                newVal = self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, alpha, beta, indent + "  ")
-                if DEBUG: print indent, "newVal:   ", newVal
-                val = min(val, newVal)
-                if val < alpha: 
-                    if DEBUG: print indent, "min:      ", val
-                    return val
+                newVal = self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, alpha, beta)[1]
+                bestVal = min(bestVal, newVal)
+                if bestVal < alpha: 
+                    return (None,bestVal)
                 else: 
-                    beta = min(beta, val)
-                    if DEBUG: print indent, "alpha:    ", alpha
-                    if DEBUG: print indent, "beta:     ", beta
-            return val #(?)
+                    beta = min(beta, bestVal)
+            # Once again, we don't care about which action the ghosts take
+            # because we are pacman!
+            return (None,bestVal)
 
 from numpy import mean
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -278,7 +251,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
         return self.getValue(gameState, 0)[0]
 
-    def getValue(self, gameState, curDepth, indent=""):
+    def getValue(self, gameState, curDepth):
         '''See description of ExpectimaxAgent.getAction above'''        
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
@@ -290,11 +263,11 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         if (curAgent == 0):
             # Pacman does not move randomly so we just do the same as we
             # did in MinimaxAgent.getValue.
-            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
+            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1)[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
         else:
             # Ghosts move randomly (uniformly) so we just take the mean
             # of the predicted values over all possible actions
-            return (None, mean(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1],gameState.getLegalActions(curAgent))))
+            return (None, mean(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1)[1],gameState.getLegalActions(curAgent))))
         
 def betterEvaluationFunction(currentGameState):
     """
