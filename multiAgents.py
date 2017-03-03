@@ -310,7 +310,12 @@ def betterEvaluationFunction(currentGameState):
 
     ghostStates = currentGameState.getGhostStates()
     badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer <= manhattanDistance(pos, ghostState.getPosition())]
+    badGhostDists = []
+
+
     nearbyScaredGhosts = [ghostState for ghostState in ghostStates if ghostState not in badGhosts]
+    nearbyScaredGhostDists = []
+
     origNumGhosts = len(ghostStates)
 
     numCapsules = len(capsules)
@@ -320,6 +325,11 @@ def betterEvaluationFunction(currentGameState):
     if currentGameState.isWin():
         winFeature = 1000000
 
+
+    ############### GHOST HOUSE FEATURE #############
+        
+    #################################################
+
     # Move into helper function for testing death
     if (currentGameState.isLose()):
         return -100000
@@ -328,6 +338,7 @@ def betterEvaluationFunction(currentGameState):
     scaredGhostFeature = 0
     minScarMazeDist = float("inf")
     if numScaredGhosts > 0:
+        scaredGhostDists = map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts)
         span = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
         scaredGhostFeature += 1 + (origNumCapsules - numCapsules - 1)*(origNumGhosts+1) + origNumGhosts - numScaredGhosts + 1/float(span)
         minScarMazeDist = span
@@ -410,18 +421,20 @@ def betterEvaluationFunction(currentGameState):
         numWalls += int(walls[pos[0]][pos[1]+i])
         numWalls += int(walls[pos[0]+i][pos[1]])
     wallsFeature = 1/(1+numWalls)
-    if numWalls == 3:
-        wallsFeature = 30
+    if numWalls == 3 and len(nearbyScaredGhosts) == 0:
+        wallsFeature = 60
 
     ######## GHOST SANDWICH FEATURE #########
     # while this works right now really need to generalize and 
     # maybe make a tad better
-    horiLine = True
-    vertiLine = True
+    horiGhosts = 0
+    vertGhosts = 0
+
     for ghostState in badGhosts:
-        if ghostState.getPosition()[0] != pos[0]: horiLine = False
+        horiGhosts += int(ghostState.getPosition()[0] == pos[0])
+        vertGhosts += int(ghostState.getPosition()[1] == pos[1])
         if ghostState.getPosition()[1] != pos[1]: vertiLine = False
-    lineFeature = float(horiLine or vertiLine) 
+    lineFeature = float(horiGhosts > 0 or vertGhosts > 0) 
 
 
     weightedSum = (1      * winFeature
