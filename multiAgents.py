@@ -323,16 +323,6 @@ def betterEvaluationFunction(currentGameState):
     # Move into helper function for testing death
     if (currentGameState.isLose()):
         return -100000
-    
-
-    ####### WALL FEATURE #################
-    numWalls = 0
-    for i in [1, -1]:
-        numWalls += int(walls[pos[0]][pos[1]+i])
-        numWalls += int(walls[pos[0]+i][pos[1]])
-    wallsFeature = 1/(1+numWalls)
-    if numWalls == 3:
-        wallsFeature = 30
 
     ######## SCARED GHOST FEATURE #########
     scaredGhostFeature = 0
@@ -414,6 +404,26 @@ def betterEvaluationFunction(currentGameState):
             if meanManhattanBadGhost < 8:
                 badGhostFeature = 1 / float(1 + meanManhattanBadGhost)
 
+    ####### WALL FEATURE #################
+    numWalls = 0
+    for i in [1, -1]:
+        numWalls += int(walls[pos[0]][pos[1]+i])
+        numWalls += int(walls[pos[0]+i][pos[1]])
+    wallsFeature = 1/(1+numWalls)
+    if numWalls == 3:
+        wallsFeature = 30
+
+    ######## GHOST SANDWICH FEATURE #########
+    # while this works right now really need to generalize and 
+    # maybe make a tad better
+    horiLine = True
+    vertiLine = True
+    for ghostState in badGhosts:
+        if ghostState.getPosition()[0] != pos[0]: horiLine = False
+        if ghostState.getPosition()[1] != pos[1]: vertiLine = False
+    lineFeature = float(horiLine or vertiLine) 
+
+
     weightedSum = (1      * winFeature
                    + 20   * distBoundFeature
                    + 250  * capsuleFeature 
@@ -421,6 +431,7 @@ def betterEvaluationFunction(currentGameState):
                    - 200  * badGhostFeature 
                    - 150  * badGhostMeanFeature 
                    - 10   * wallsFeature
+                   - 100  * lineFeature
                    + random.uniform(0, 0.01))
         
     return weightedSum
