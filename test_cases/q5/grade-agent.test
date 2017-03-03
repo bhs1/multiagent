@@ -9,10 +9,10 @@ numGames: "10"
 nonTimeoutMinimum: "0"
 nonTimeoutThresholds: "10"
 
-scoreThresholds: "500 1000"
+scoreThresholds: "800 1200"
 
 winsMinimum: "1"
-winsThresholds: "1 5 10"
+winsThresholds: "5 10"
 
-randomSeed: "0"
+randomSeed: "567"
 ghosts: "[RandomGhost(1), RandomGhost(2)]"

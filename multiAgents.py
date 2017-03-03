@@ -327,7 +327,8 @@ def betterEvaluationFunction(currentGameState):
 
 
     ############### GHOST HOUSE FEATURE #############
-        
+    origGhostPositions =  map(lambda x: x[1],layout.agentPositions)[1:]
+    ghostHouseFeature = int(any(map(lambda ghostPos: searchAgents.mazeDistance(pos,ghostPos,currentGameState) <= 2, origGhostPositions)))
     #################################################
 
     # Move into helper function for testing death
@@ -425,6 +426,7 @@ def betterEvaluationFunction(currentGameState):
                    - 200  * badGhostFeature 
                    - 150  * badGhostMeanFeature 
                    - 10   * wallsFeature
+                   - 100  * ghostHouseFeature 
                    - 100  * lineFeature
                    + random.uniform(0, 0.01))
         
