@@ -106,8 +106,6 @@ class ReflexAgent(Agent):
 
         if DEBUG: print "Score:", score
 
-
-        "*** YOUR CODE HERE ***"
         return score
 
 def scoreEvaluationFunction(currentGameState):
@@ -164,17 +162,26 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         return self.getValue(gameState,0)[0]
 
-
     
-    def getValue(self, gameState, curDepth, indent=""):
+    def getValue(self, gameState, curDepth):
+        '''Recursive function to calculate the minimax from depth curDepth in game state gameState
+        '''
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
         if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
+            # If we've reached a terminal state or the depth specified in
+            # self.depth, just evaluate the current terminal/leaf state
             return (None, self.evaluationFunction(gameState))
         if (curAgent == 0):
-            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
+            # curAgent == 0 implies that pacman is going
+            # Return the maximum (action, value) tuple (comparing by minimax
+            # value) over all possible actions
+            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1)[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
         else:
-            return min(map(lambda action: (action, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)), key = lambda x: x[1])
+            # Now do the same for ghosts but minimizing this time. Also,
+            # we no longer care about the actions so we avoid generating
+            # the tuples and just return None as the action
+            return (None,min(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1)[1],gameState.getLegalActions(curAgent))))
         
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
