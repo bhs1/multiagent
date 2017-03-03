@@ -303,25 +303,36 @@ def betterEvaluationFunction(currentGameState):
     food = currentGameState.getFood()
     ghostStates = currentGameState.getGhostStates()
     scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
-    badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer == 0]
-    nearbyScaredGhosts = [ghostState for ghostState in ghostStates 
-                          if ((ghostState.scaredTimer > 0) 
-                              and (manhattanDistance(pos, ghostState.getPosition()) < ghostState.scaredTimer))]
+    badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer <= manhattanDistance(pos, ghostState.getPosition())]
+    nearbyScaredGhosts = [ghostState for ghostate in ghostStates if ghostState not in badGhosts]
     capsules = currentGameState.getCapsules();
 
+    ######## NUM FOOD FEATUER ############
+    numFood = currentGameState.getNumFood()
+    numFoodFeature = numFood
+
+    #DEBUG = ( numFood <= 2 )
     DEBUG = False
+
+    if DEBUG: print "Number of food left:", numFood
+    
     
     if DEBUG: print "___________________________________________"
     if DEBUG: print "Is win state:", currentGameState.isWin()
-    if (currentGameState.isWin()):
-        if DEBUG: print "Score: 10000"
-        return 20000
+    #if (currentGameState.isWin()):
+   #     if DEBUG: print "Score: 10000"
+   #     return 20000
+
+
+    winFeature = 0
+    if currentGameState.isWin():
+        winFeature = 1000000
 
     if DEBUG: print "Is lose state:", currentGameState.isLose()
     # Move into helper function for testing death
     if (currentGameState.isLose()):
         if DEBUG: print "Score: -10000"
-        return -20000
+        return -2000000
 
 
     ######## SCORE FEATURE ##########
@@ -332,98 +343,92 @@ def betterEvaluationFunction(currentGameState):
     if len(badGhosts) > 0:
         minManhattanBadGhost = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts))
         if DEBUG: print "Minimum distance to bad ghost:", minManhattanBadGhost
-        if minManhattanBadGhost < 8:
+        if minManhattanBadGhost < 4:
             badGhostFeature = 1 / float(minManhattanBadGhost)
     
+
     ######## SCARED GHOST FEATURE #########
     ####### EAT GHOST FEATURE #############
     # add in try-catch
-    scaredGhostFeature = 0
-    eatGhostFeature = 0
+    ######## CAPSULE FEATURE #############
+    # should make capsule worth even more if bad ghost is close (but not too close)
+    scaredGhostFeature = 1 / (1 + len(capsules))
     if len(nearbyScaredGhosts) > 0:
-        minManhattanScaredGhost = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
-        if DEBUG: print "Minimum distance to scared ghost:", minManhattanScaredGhost
-        scaredGhostFeature = 1 / float(minManhattanScaredGhost)
-        if minManhattanScaredGhost < 3:
-            eatGhostFeature = 1 / float(minManhattanScaredGhost)
+        #span = sum(map(lambda ghostState: min(manhattanDistance(ghostState.getPosition(), pos), 6), nearbyScaredGhosts))
+        span = distHeuristic(pos, [ghostState.getPosition() for ghostState in nearbyScaredGhosts])
+        scaredGhostFeature = 100 / float(1 + span + 100*len(nearbyScaredGhosts) + random.uniform(0, 0.5))
 
+    maxFoodFeature = 1
+    minFoodFeature = 1
+    distBoundFeature = 1
 
+    if numFood > 0:
     ######## MAX FOOD FEATURE #############
-    maxDistToFood = max(map(lambda f: manhattanDistance(pos, f), food.asList()))
-    if DEBUG: print "Maximum distance to food:", maxDistToFood
-    maxFoodFeature =  1 / float(maxDistToFood)
+        maxDistToFood = max(map(lambda f: manhattanDistance(pos, f), food.asList()))
+        if DEBUG: print "Maximum distance to food:", maxDistToFood
+        maxFoodFeature =  1 / max(float(maxDistToFood), 1.0)
 
     ######## MIN FOOD FEATURE #############
-    minDistToFood = min(map(lambda f: manhattanDistance(pos, f), food.asList()))
-    if DEBUG: print "Minimum distance to food:", minDistToFood
-    minFoodFeature =  1 / float(minDistToFood)
+        minDistToFood = min(map(lambda f: manhattanDistance(pos, f), food.asList()))
+        if DEBUG: print "Minimum distance to food:", minDistToFood
+        minFoodFeature =  1 / max(float(minDistToFood), 1.0)
 
     ####### LOWER BOUND DIST TO GOAL ########
-    distLowerBound = foodHeuristic(currentGameState)
-    if DEBUG: print "Lower bound distance to goal:", distLowerBound
-    distBoundFeature =  1 / float(distLowerBound)
-    
+        distLowerBound = distHeuristic(pos, food.asList())
+        if DEBUG: print "Lower bound distance to goal:", distLowerBound
+        distBoundFeature =  1 / max(float(distLowerBound), 1.0)   
 
     ######## CAPSULE FEATURE #############
     # should make capsule worth even more if bad ghost is close (but not too close)
-    capsuleFeature = 0
-    if len(capsules) > 0:
-        minDistToCapsule = min(map(lambda cap: manhattanDistance(pos, cap), capsules))
-        if DEBUG: print "Minimum distance to capsule:", minDistToCapsule
-        MAX = 6
-        capsuleFeature =  1 / float(max(minDistToCapsule, MAX))
-    
-    ######## NUM FOOD FEATUER ############
-    numFood = currentGameState.getNumFood()
-    numFoodFeature = numFood
-    if DEBUG: print "Number of food left:", numFood
+    capsuleFeature = 1
+    if len(nearbyScaredGhosts) > 0:
+        capsuleFeature = 0
+    if len(capsules) > 0 and len(nearbyScaredGhosts) == 0:
+        span = distHeuristic(pos, capsules)
+        capsuleFeature = 1 / float(1 + span + len(capsules) + random.uniform(0, 0.5))
 
-    # THOUGHTS:
-    #
-    # want to minimize maximum distance to food
-    #
-    # if maximum distance to food is same, want to minimize distance to food
-    #
-    # if maximum distance to food is same, and minimum distance to food is same, 
-    # want to minimize number of food
-    #
-    # it should be more important to minimize number of food than keep max food distance the same
-    #
-    # score increases by almost 10 for eating a food so everything should be contributing at least twice that
-    # 
-    # need to capture more in the min dist to scaredghost - not enough
-    # because eating the ghost actually increases the min dist
-    # so if min dist is 1, actually want to return something even higher
 
-    weightedSum = (  1     * scoreFeature 
+    weightedSum = (  #0.01     * scoreFeature 
 
-                     #+ 20  * maxFoodFeature
-                     #+ 30  * minFoodFeature
-                     +   1  * distBoundFeature
-                     -   1  * numFoodFeature
+                     1      * winFeature
 
-                     #+ 100  * capsuleFeature
-                     #+ 15  * scaredGhostFeature
-                     #+ 300  * eatGhostFeature
+                     #+   1  * minFoodFeature
+                     #+   10 * distBoundFeature
+                     #-   100  * numFoodFeature
 
-                     - 60  * badGhostFeature 
+                     + 50  * capsuleFeature 
+
+                     + 200  *  scaredGhostFeature
+
+                     -200  * badGhostFeature 
+                     + random.uniform(0, 0.1)
                      )
 
+    print "capsuleFeature", 50*capsuleFeature
+    print "scaredGhostFeature", 200*scaredGhostFeature
+
+    if False and weightedSum > 0 and badGhostFeature > 0:
+        print "distBoundFeature", 100*distBoundFeature
+        print "capsuleFeature", 250*capsuleFeature
+        print "scaredGhostFeature", 250*scaredGhostFeature
+        print "badGhostFeature", -400*badGhostFeature
+        
     # if you want to minimize something, return positive inverse (which feature already is)
     # if you care more about minimizing one thing than the other multiply it by more
 
     if DEBUG:
-        print "Weighted Score Feature:       ", 1   * scoreFeature
+        #print "Weighted Score Feature:       ", 1   * scoreFeature
+        #print ""
+        #print "Weighted Max Food Feature:    ", 20 * maxFoodFeature
+        #print "Weighted Min Food Feature:    ", 30 * minFoodFeature
+        print "Weighted Num Food Feature:    ", -1 * numFoodFeature
+        print "Weighted Lower Bound Feature: ", 100 * distBoundFeature
         print ""
-        print "Weighted Max Food Feature:    ", 20 * maxFoodFeature
-        print "Weighted Min Food Feature:    ", 30 * minFoodFeature
-        print "Weighted Num Food Feature:    ", 90 * numFoodFeature
-        print ""
-        print "Weighted Capsule Feature:     ", 40 * capsuleFeature
-        print "Weighted Scared Ghost Feature:", 50 * scaredGhostFeature
-        print "Weighted Eat Ghost Feature:   ", 200 * eatGhostFeature        
-        print ""
-        print "Weighted Bad Ghost Feature:   ", -500 * badGhostFeature
+        print "Weighted Capsule Feature:     ", 10 * capsuleFeature
+        #print "Weighted Scared Ghost Feature:", 50 * scaredGhostFeature
+        #print "Weighted Eat Ghost Feature:   ", 200 * eatGhostFeature        
+        #print ""
+        print "Weighted Bad Ghost Feature:   ", -50 * badGhostFeature
         print ""
         print "Total sum:                    ", weightedSum 
         print ""
@@ -450,7 +455,7 @@ class ContestAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
-def foodHeuristic(state):
+def distHeuristic(pacPos, posList):
     """
     Your heuristic for the FoodSearchProblem goes here.
 
@@ -481,11 +486,10 @@ def foodHeuristic(state):
 
     # Fetch state.
     #position = state.
-    position = state.getPacmanPosition()
-    foodGrid = state.getFood()
 
     #position, foodGrid = state
-    foods = foodGrid.asList()
+    position = pacPos
+    foods = posList
 
     # If there's no food left, return 0.
     if len(foods) == 0:
