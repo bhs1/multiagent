@@ -351,17 +351,16 @@ def betterEvaluationFunction(currentGameState):
     ####### EAT GHOST FEATURE #############
     # add in try-catch
     ######## CAPSULE FEATURE #############
-    # should make capsule worth even more if bad ghost is close (but not too close)
-    scaredGhostFeature = 1 / (1 + len(capsules))
+    scarDenom = 1 + len(capsules)*len(ghostStates) + len(nearbyScaredGhosts)
     if len(nearbyScaredGhosts) > 0:
-        #span = sum(map(lambda ghostState: min(manhattanDistance(ghostState.getPosition(), pos), 6), nearbyScaredGhosts))
-        span = distHeuristic(pos, [ghostState.getPosition() for ghostState in nearbyScaredGhosts])
-        scaredGhostFeature = 100 / float(1 + span + 100*len(nearbyScaredGhosts) + random.uniform(0, 0.5))
+        span = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
+        scarDenom += (1 - 1 / float(span))
+    scaredGhostFeature = 1 / float(scarDenom)
+
 
     maxFoodFeature = 1
     minFoodFeature = 1
     distBoundFeature = 1
-
     if numFood > 0:
     ######## MAX FOOD FEATURE #############
         maxDistToFood = max(map(lambda f: manhattanDistance(pos, f), food.asList()))
@@ -380,12 +379,11 @@ def betterEvaluationFunction(currentGameState):
 
     ######## CAPSULE FEATURE #############
     # should make capsule worth even more if bad ghost is close (but not too close)
-    capsuleFeature = 1
-    if len(nearbyScaredGhosts) > 0:
-        capsuleFeature = 0
-    if len(capsules) > 0 and len(nearbyScaredGhosts) == 0:
-        span = distHeuristic(pos, capsules)
-        capsuleFeature = 1 / float(1 + span + len(capsules) + random.uniform(0, 0.5))
+    capDenom = 1 + (1 + len(capsules))*len(ghostStates)
+    if len(nearbyScaredGhosts) == 0 and len(capsules) > 0: 
+        span = min(map(lambda cap: manhattanDistance(pos, cap), capsules))
+        capDenom += (1 - 1 / float(span))
+    capsuleFeature = 1 / float(capDenom)
 
 
     weightedSum = (  #0.01     * scoreFeature 
@@ -393,20 +391,21 @@ def betterEvaluationFunction(currentGameState):
                      1      * winFeature
 
                      #+   1  * minFoodFeature
-                     #+   10 * distBoundFeature
+                     +   10 * distBoundFeature
                      #-   100  * numFoodFeature
 
-                     + 50  * capsuleFeature 
+                     + 400  * capsuleFeature 
 
                      + 200  *  scaredGhostFeature
 
                      -200  * badGhostFeature 
-                     + random.uniform(0, 0.1)
+                     + random.uniform(0, 0.01)
                      )
 
-    print "capsuleFeature", 50*capsuleFeature
-    print "scaredGhostFeature", 200*scaredGhostFeature
-
+    #print "capsuleFeature", 200*capsuleFeature
+    #print "scaredGhostFeature", 200*scaredGhostFeature
+    #print "badGhostFeature", -200*badGhostFeature
+        
     if False and weightedSum > 0 and badGhostFeature > 0:
         print "distBoundFeature", 100*distBoundFeature
         print "capsuleFeature", 250*capsuleFeature
@@ -502,8 +501,8 @@ def distHeuristic(pacPos, posList):
         G.append((i, j, util.manhattanDistance(foods[i], foods[j])))
         
     # Initialize the distance to be the distance to the closest food.
-    dist = min(map(lambda food: util.manhattanDistance(position,food), foods))
-
+    distTuple = min(map(lambda food: (food,util.manhattanDistance(position,food)), foods), key = lambda x: x[1])
+    dist = util.
     # Kruskal's algorithm for finding minimum-cost spanning tree.
     # See pseudocode at https://en.wikipedia.org/wiki/Kruskal's_algorithm
     parent = dict()
