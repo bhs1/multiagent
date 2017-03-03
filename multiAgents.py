@@ -76,39 +76,27 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
         newGhostPositions = successorGameState.getGhostPositions()
 
-        DEBUG = False
-        
-        if DEBUG: print "Is win state:", successorGameState.isWin()
-
+        # Big reward for a win (bigger in magnitude than any nonloss score)
         if (successorGameState.isWin()):
-            if DEBUG: print "Score: 2000"
             return 2000
-
-        if DEBUG: print "Is lose state:", successorGameState.isLose()
-
-        # Move into helper function for testing death
+        
+        # Big penalty for a loss (bigger in magnitude than any nonloss score)
         if (successorGameState.isLose()):
-            if DEBUG: print "Score: -2000"
             return -2000
 
+        # Simple pacman like higher scores
         score = successorGameState.getScore()
 
-        # take into account scared ghosts separately
+        # Stay away from ghosts if they are nearby (within 4 manhattan distance. Otherwise focus on eating
         minManhattanGhost = min(map(lambda ghost: manhattanDistance(newPos, ghost.getPosition()), newGhostStates))
+        
         MAX = 4
-        score -= 10*(MAX - min(minManhattanGhost, MAX))
+        score -= 10*(MAX - min(minManhattanGhost, MAX))        
 
-        if DEBUG: print "Minimum distance to ghost:", minManhattanGhost
-
+        # Go toward the nearest food
         minManhattanFood = min(map(lambda food: manhattanDistance(newPos, food), newFood.asList()))
         score += 10 / minManhattanFood
 
-        if DEBUG: print "Minimum distance to food:", minManhattanFood
-
-        if DEBUG: print "Score:", score
-
-
-        "*** YOUR CODE HERE ***"
         return score
 
 def scoreEvaluationFunction(currentGameState):
@@ -165,17 +153,26 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         return self.getValue(gameState,0)[0]
 
-
     
-    def getValue(self, gameState, curDepth, indent=""):
+    def getValue(self, gameState, curDepth):
+        '''Recursive function to calculate the minimax from depth curDepth in game state gameState
+        '''
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
         if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
+            # If we've reached a terminal state or the depth specified in
+            # self.depth, just evaluate the current terminal/leaf state
             return (None, self.evaluationFunction(gameState))
         if (curAgent == 0):
-            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
+            # curAgent == 0 implies that pacman is going
+            # Return the maximum (action, value) tuple (comparing by minimax
+            # value) over all possible actions
+            return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1)[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
         else:
-            return min(map(lambda action: (action, self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)), key = lambda x: x[1])
+            # Now do the same for ghosts but minimizing this time. Also,
+            # we no longer care about the actions so we avoid generating
+            # the tuples and just return None as the action
+            return (None,min(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1)[1],gameState.getLegalActions(curAgent))))
         
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -283,13 +280,21 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         return self.getValue(gameState, 0)[0]
 
     def getValue(self, gameState, curDepth, indent=""):
+        '''See description of ExpectimaxAgent.getAction above'''        
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
+
         if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
+            # If we've reached a terminal state or the depth specified in
+            # self.depth, just evaluate the current terminal/leaf state
             return (None, self.evaluationFunction(gameState))
         if (curAgent == 0):
+            # Pacman does not move randomly so we just do the same as we
+            # did in MinimaxAgent.getValue.
             return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
         else:
+            # Ghosts move randomly (uniformly) so we just take the mean
+            # of the predicted values over all possible actions
             return (None, mean(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1],gameState.getLegalActions(curAgent))))
         
 def betterEvaluationFunction(currentGameState):
