@@ -300,16 +300,19 @@ def betterEvaluationFunction(currentGameState):
     """
 
     # Useful information you can extract from a GameState (pacman.py)
+    layout = currentGameState.data.layout
+    walls = layout.walls
+
     pos = currentGameState.getPacmanPosition()
     food = currentGameState.getFood()
     capsules = currentGameState.getCapsules()
+    origNumCapsules = len(layout.capsules)
 
     ghostStates = currentGameState.getGhostStates()
     badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer <= manhattanDistance(pos, ghostState.getPosition())]
     nearbyScaredGhosts = [ghostState for ghostState in ghostStates if ghostState not in badGhosts]
-
     origNumGhosts = len(ghostStates)
-    origNumCapsules = len(currentGameState.data.layout.capsules)
+
     numCapsules = len(capsules)
     numScaredGhosts = len(nearbyScaredGhosts)
 
@@ -321,6 +324,16 @@ def betterEvaluationFunction(currentGameState):
     if (currentGameState.isLose()):
         return -100000
     
+
+    ####### WALL FEATURE #################
+    numWalls = 0
+    for i in [1, -1]:
+        numWalls += int(walls[pos[0]][pos[1]+i])
+        numWalls += int(walls[pos[0]+i][pos[1]])
+    wallsFeature = 1/(1+numWalls)
+    if numWalls == 3:
+        wallsFeature = 30
+
     ######## SCARED GHOST FEATURE #########
     scaredGhostFeature = 0
     minScarMazeDist = float("inf")
@@ -405,8 +418,9 @@ def betterEvaluationFunction(currentGameState):
                    + 20   * distBoundFeature
                    + 250  * capsuleFeature 
                    + 100  * scaredGhostFeature
-                   - 100  * badGhostFeature 
-                   - 50  * badGhostMeanFeature 
+                   - 200  * badGhostFeature 
+                   - 150  * badGhostMeanFeature 
+                   - 10   * wallsFeature
                    + random.uniform(0, 0.01))
         
     return weightedSum
