@@ -289,13 +289,21 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         return self.getValue(gameState, 0)[0]
 
     def getValue(self, gameState, curDepth, indent=""):
+        '''See description of ExpectimaxAgent.getAction above'''        
         numAgents = gameState.getNumAgents()
         curAgent = curDepth % numAgents
+
         if (curDepth == ((self.depth*numAgents)))  or len(gameState.getLegalActions(curAgent)) == 0:
+            # If we've reached a terminal state or the depth specified in
+            # self.depth, just evaluate the current terminal/leaf state
             return (None, self.evaluationFunction(gameState))
         if (curAgent == 0):
+            # Pacman does not move randomly so we just do the same as we
+            # did in MinimaxAgent.getValue.
             return max(map(lambda action: (action,self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1]),gameState.getLegalActions(curAgent)),key = lambda x: x[1])
         else:
+            # Ghosts move randomly (uniformly) so we just take the mean
+            # of the predicted values over all possible actions
             return (None, mean(map(lambda action: self.getValue(gameState.generateSuccessor(curAgent,action), curDepth + 1, indent + "  ")[1],gameState.getLegalActions(curAgent))))
         
 def betterEvaluationFunction(currentGameState):
