@@ -302,15 +302,16 @@ def betterEvaluationFunction(currentGameState):
     # Useful information you can extract from a GameState (pacman.py)
     pos = currentGameState.getPacmanPosition()
     food = currentGameState.getFood()
-    ghostStates = currentGameState.getGhostStates()
-    scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
-    badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer <= manhattanDistance(pos, ghostState.getPosition())]
-    nearbyScaredGhosts = [ghostState for ghostate in ghostStates if ghostState not in badGhosts]
-    capsules = currentGameState.getCapsules();
+    capsules = currentGameState.getCapsules()
 
-    ######## NUM FOOD FEATUER ############
-    numFood = currentGameState.getNumFood()
-    numFoodFeature = numFood
+    ghostStates = currentGameState.getGhostStates()
+    badGhosts = [ghostState for ghostState in ghostStates if ghostState.scaredTimer <= manhattanDistance(pos, ghostState.getPosition())]
+    nearbyScaredGhosts = [ghostState for ghostState in ghostStates if ghostState not in badGhosts]
+
+    origNumGhosts = len(ghostStates)
+    origNumCapsules = len(currentGameState.data.layout.capsules)
+    numCapsules = len(capsules)
+    numScaredGhosts = len(nearbyScaredGhosts)
 
     winFeature = 0
     if currentGameState.isWin():
@@ -319,73 +320,93 @@ def betterEvaluationFunction(currentGameState):
     # Move into helper function for testing death
     if (currentGameState.isLose()):
         return -100000
+    
+    ######## SCARED GHOST FEATURE #########
+    scaredGhostFeature = 0
+    minScarMazeDist = float("inf")
+    if numScaredGhosts > 0:
+        span = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
+        scaredGhostFeature += 1 + (origNumCapsules - numCapsules - 1)*(origNumGhosts+1) + origNumGhosts - numScaredGhosts + 1/float(span)
+        minScarMazeDist = span
+    else:
+        scaredGhostFeature += (origNumCapsules - numCapsules)*(origNumGhosts+1)
 
+    '''
+    scarDenom = 1 + len(capsules)*len(ghostStates) + 1*len(nearbyScaredGhosts)
+    minScarMazeDist = float("inf")
+    if len(nearbyScaredGhosts) > 0:
+        distTuple = min(map(lambda ghost: (ghost,util.manhattanDistance(pos,ghost.getPosition())), nearbyScaredGhosts), key = lambda x: x[1])
+        #span = distTuple[1]
+        span = searchAgents.mazeDistance(pos, tuple(map(int,distTuple[0].getPosition())), currentGameState)
+        minScarMazeDist = span
+        scarDenom += (1 - 1 / float(span))
+    scaredGhostFeature = 1 / float(scarDenom)
+    '''
+
+    ######## CAPSULE FEATURE #############
+    # should make capsule worth even more if bad ghost is close (but not too close)
+    capsuleFeature = 0
+    minCapMazeDist = float("inf")
+    if numScaredGhosts > 0:
+        capsuleFeature += 1 + (origNumCapsules - numCapsules - 1)*(origNumGhosts+1)
+    elif numCapsules > 0:
+        distTuple = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])
+        span = searchAgents.mazeDistance(pos, distTuple[0], currentGameState)
+        minCapMazeDist = span
+        capsuleFeature += (origNumCapsules - numCapsules)*(origNumGhosts+1) + 1/float(span)
+    
+
+    '''
+    capDenom = 1 + (len(capsules)+1)*len(ghostStates)#*(1 / 100)
+    
+    if len(nearbyScaredGhosts) == 0 and len(capsules) > 0: 
+        distTuple = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])
+        #span = distTuple[1]
+        span = searchAgents.mazeDistance(pos, distTuple[0], currentGameState)
+        minCapMazeDist = span
+        capDenom += (1 - 1 / float(span))
+    capsuleFeature = 1 / float(capDenom)
+    '''
+
+    ####### LOWER BOUND DIST TO GOAL ########
+    distBoundDenom = 1 + (len(capsules)+1)*len(ghostStates)
+    numFood = currentGameState.getNumFood()
+    minBound = float("inf")
+    if len(nearbyScaredGhosts) == 0 and len(capsules) == 0:
+        distLowerBound = distHeuristic(pos, food.asList(), currentGameState)
+        distBoundDenom += distLowerBound + 2*numFood
+        minBound = distLowerBound
+    distBoundFeature = 1 / float(distBoundDenom)
 
 
     ######## BAD GHOST FEATURE #########
-    badGhostFeature = 1 / float( 1 + 4)
-    badGhostMeanFeature = 1 / float(1 + 8)
-
+    badGhostFeature = 0
+    badGhostMeanFeature = 0
     if len(badGhosts) > 0:
         badGhostDists = map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts)
         for i in xrange(len(badGhostDists)):
             if badGhostDists[i] < 4:
                 badGhostDists[i] = searchAgents.mazeDistance(pos, tuple(map(int,badGhosts[i].getPosition())), currentGameState)
         minManhattanBadGhost = min(badGhostDists)
-        meanManhattanBadGhost = sum(badGhostDists)
-        if minManhattanBadGhost < 4:
-            badGhostFeature = 1 / float(1 + minManhattanBadGhost)
-        if meanManhattanBadGhost < 8:
-            badGhostFeature = 1 / float(1 + meanManhattanBadGhost)
-    
-
-    ######## SCARED GHOST FEATURE #########
-    ####### EAT GHOST FEATURE #############
-    # add in try-catch
-    ######## CAPSULE FEATURE #############
-    scarDenom = 1 + len(capsules)*len(ghostStates) + 1*len(nearbyScaredGhosts)
-    if len(nearbyScaredGhosts) > 0:
-        distTuple = min(map(lambda ghost: (ghost,util.manhattanDistance(pos,ghost.getPosition())), nearbyScaredGhosts), key = lambda x: x[1])
-        #span = distTuple[1]
-        span = searchAgents.mazeDistance(pos, tuple(map(int,distTuple[0].getPosition())), currentGameState)
-        scarDenom += (1 - 1 / float(span))
-    scaredGhostFeature = 1 / float(scarDenom)
-
-    ######## CAPSULE FEATURE #############
-    # should make capsule worth even more if bad ghost is close (but not too close)
-    capDenom = 1 + (len(capsules)+1)*len(ghostStates)#*(1 / 100)
-    if len(nearbyScaredGhosts) == 0 and len(capsules) > 0: 
-        distTuple = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])
-        #span = distTuple[1]
-        span = searchAgents.mazeDistance(pos, distTuple[0], currentGameState)
-        capDenom += (1 - 1 / float(span))
-    capsuleFeature = 1 / float(capDenom)
-
-
-    maxFoodFeature = 1
-    minFoodFeature = 1
-    distBoundFeature = 1
-    if numFood > 0:
-    ######## MAX FOOD FEATURE #############
-        maxDistToFood = max(map(lambda f: manhattanDistance(pos, f), food.asList()))
-        maxFoodFeature =  1 / max(float(maxDistToFood), 1.0)
-
-    ######## MIN FOOD FEATURE #############
-        minDistToFood = min(map(lambda f: manhattanDistance(pos, f), food.asList()))
-        minFoodFeature =  1 / float(1 + minDistToFood)
-
-    ####### LOWER BOUND DIST TO GOAL ########
-        distLowerBound = distHeuristic(pos, food.asList(), currentGameState)
-        distBoundFeature =  1 / (1 + float(distLowerBound))   
-
+        meanManhattanBadGhost = float("inf")
+        fartherGhosts = badGhostDists[:]
+        fartherGhosts.remove(minManhattanBadGhost)
+        if len(fartherGhosts) > 0:
+            meanManhattanBadGhost = sum(fartherGhosts)
+        if (0.5*minManhattanBadGhost <= minCapMazeDist 
+            and 0.5*minManhattanBadGhost <= minScarMazeDist
+            and 0.5*minManhattanBadGhost <= minBound):
+            if minManhattanBadGhost < 4:
+                badGhostFeature = 1 / float(1 + minManhattanBadGhost)
+            if meanManhattanBadGhost < 8:
+                badGhostFeature = 1 / float(1 + meanManhattanBadGhost)
 
     weightedSum = (1      * winFeature
-                   + 10   * distBoundFeature
-                   - 0.1  * numFoodFeature
-                   + 300  * capsuleFeature 
-                   + 600  *  scaredGhostFeature
-                   - 200  * badGhostFeature 
-                   - 100  * badGhostMeanFeature 
+                   + 20   * distBoundFeature
+                   + 250  * capsuleFeature 
+                   + 100  * scaredGhostFeature
+                   - 100  * badGhostFeature 
+                   - 50  * badGhostMeanFeature 
                    + random.uniform(0, 0.01))
         
     return weightedSum
