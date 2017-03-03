@@ -10,7 +10,8 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-
+#
+# Students: Jamie Lesser and Ben Solis-Cohen
 
 from util import manhattanDistance
 from game import Directions
@@ -278,137 +279,157 @@ def betterEvaluationFunction(currentGameState):
     """
 
     # Useful information you can extract from a GameState (pacman.py)
-    layout     = currentGameState.data.layout         # add comment here
-    walls      = layout.walls                         # add comment here
-    pos        = currentGameState.getPacmanPosition() # add comment here
-    capsules   = currentGameState.getCapsules()       # add comment here
-    food       = currentGameState.getFood()           # add comment here
-    origCapNum = len(layout.capsules)                 # add comment here
-    capNum     = len(capsules)                        # add comment here
+    layout     = currentGameState.data.layout         # Layout of this game.
+    walls      = layout.walls                         # Grid of where walls are.
+    pos        = currentGameState.getPacmanPosition() # Pacman's current position.
+    food       = currentGameState.getFood()           # Grid of where food is.
+    foodNum    = len(food.asList())                   # Current number of food.
+    capsules   = currentGameState.getCapsules()       # Available capsule positions.
+    origCapNum = len(layout.capsules)                 # Original number of capsules.
+    capNum     = len(capsules)                        # Current number of capsules.
 
-    # add comment here
+
+    # Split ghosts between those who will be scared by the time 
+    # pacman gets to them, and ones we consider dangerous.
     ghostStates  = set(map(lambda ghost: (ghost, manhattanDistance(pos, ghost.getPosition())), currentGameState.getGhostStates()))
     badGhosts    = set(filter(lambda (ghost, dist): ghost.scaredTimer <= dist, ghostStates))
     scaredGhosts = ghostStates - badGhosts
+    origGhostPositions =  map(lambda x: x[1],layout.agentPositions)[1:]
 
-    origGhostNum   = len(ghostStates)    # add comment here
-    scaredGhostNum = len(scaredGhosts)    # add comment here
+    origGhostNum   = len(ghostStates)    # Number of ghost when game started.
+    scaredGhostNum = len(scaredGhosts)   # Number of scared ghosts right now.
 
 
-    # explain
-    winFeature = 0
-    if currentGameState.isWin():
-        winFeature = 1000000
-
-    # explain
-    if (currentGameState.isLose()):
+    # LOSE FEATURE
+    # Losing is really bad. Really really bad.
+    # Don't even bother looking at other features.
+    if currentGameState.isLose():
         return -100000
 
 
-    ############### GHOST HOUSE FEATURE #############
-    origGhostPositions =  map(lambda x: x[1],layout.agentPositions)[1:]
-    ghostHouseFeature = int(any(map(lambda ghostPos: searchAgents.mazeDistance(pos,ghostPos,currentGameState) <= 1, origGhostPositions)))
-    #################################################
+    # WIN FEATURE
+    # Winning is great! 
+    # But some wins are better than others.
+    winFeature = 1000000 * int(currentGameState.isWin())
 
 
+    # GHOST HOUSE FEATURE 
+    # Discourage being close to where the ghosts start.
+    # Boolean value reflects pacman being within 1 unit 
+    # from wherever a ghost starts.
+    ghostHouseFeature = int(any(map(lambda ghostPos: 
+                                    searchAgents.mazeDistance(pos,ghostPos,currentGameState) <= 1, 
+                                    origGhostPositions)))
 
-    ######## SCARED GHOST FEATURE #########
+
+    # SCARED GHOST FEATURE
+    # Encourage eating a scared ghost. 
+    # This feature is intimiately related to the capsule feature 
+    # as it should be incentivised to finish eating the available
+    # scared ghosts before eating another capsule.
     scaredGhostFeature = 0
-    minScarMazeDist = float("inf")
-    if scaredGhostNum > 0:
-        distTuple = min(scaredGhosts, key = lambda x: x[1])
-        span = searchAgents.mazeDistance(pos, tuple(map(int,distTuple[0].getPosition())), currentGameState)
-        minScarMazeDist = span
-        scaredGhostFeature += 1 + (origCapNum - capNum - 1)*(origGhostNum+1) + origGhostNum - scaredGhostNum + 1/float(span)
-    else:
-        scaredGhostFeature += (origCapNum - capNum)*(origGhostNum+1)
-
-
-    ######## CAPSULE FEATURE #############
-    # should make capsule worth even more if bad ghost is close (but not too close)
-    capsuleFeature = 0
-    minCapMazeDist = float("inf")
-    if scaredGhostNum > 0:
-        capsuleFeature += 1 + (origCapNum - capNum - 1)*(origGhostNum+1)
-    elif capNum > 0:
-        distTuple = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])
-        span = searchAgents.mazeDistance(pos, distTuple[0], currentGameState)
-        minCapMazeDist = span
-        capsuleFeature += (origCapNum - capNum)*(origGhostNum+1) + 1/float(span)
+    minScaredGhostDist = float("inf")
     
+    if scaredGhostNum > 0:
+        minScaredGhostPos   = tuple(map(int, min(scaredGhosts, key = lambda x: x[1])[0].getPosition()))
+        minScaredGhostDist  = searchAgents.mazeDistance(pos, minScaredGhostPos, currentGameState)
+        scaredGhostFeature += origGhostNum - scaredGhostNum + 1/float(minScaredGhostDist)
 
-    ####### LOWER BOUND DIST TO GOAL ########
-    distBoundDenom = 1 + (len(capsules)+1)*len(ghostStates)
-    numFood = currentGameState.getNumFood()
-    minBound = float("inf")
+    elif capNum > 0:
+        scaredGhostFeature += (origCapNum - capNum) * (origGhostNum + 1)
+
+
+    # CAPSULE FEATURE
+    # Encourage eating a capsule. 
+    # This feature is intimiately related to the scared ghost feature 
+    # as it should be incentivised to eat the 
+    # scared ghosts before eating another capsule.
+    capsuleFeature = 0
+    minCapsuleDist = float("inf")
+
+    if scaredGhostNum > 0:
+        capsuleFeature = 1 + (origCapNum - capNum - 1) * (origGhostNum + 1)
+
+    elif capNum > 0:
+        minCapsulePos  = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])[0]
+        minCapsuleDist = searchAgents.mazeDistance(pos, minCapsulePos, currentGameState)
+        capsuleFeature =  1/float(minCapsuleDist) + (origCapNum - capNum) * (origGhostNum + 1)
+
+
+    # GOAL BOUND FEATURE
+    # Encourage decreasing the estimated path to finishing the food.
+    # Adopted from Ben's food heuristic last project.
+    goalBoundDenom = 1 + (len(capsules)+1)*len(ghostStates)
+    goalBound = float("inf")
+    
     if len(scaredGhosts) == 0 and len(capsules) == 0:
-        distLowerBound = distHeuristic(pos, food.asList(), currentGameState)
-        distBoundDenom += distLowerBound + 2*numFood
-        minBound = distLowerBound
-    distBoundFeature = 1 / float(distBoundDenom)
+        goalBound = distHeuristic(pos, food.asList(), currentGameState)
+        goalBoundDenom += goalBound + 2*foodNum
+    
+    goalBoundFeature = 1 / float(goalBoundDenom)
 
 
-    ######## BAD GHOST FEATURE #########
-    badGhostFeature = 0
-    badGhostMeanFeature = 0
+    # BAD GHOST FEATURE
+    # Bad ghosts are bad, run away!
+    minBadGhostFeature = 0
 
     if len(badGhosts) > 0:
+        # If a ghost is really close, take the time to compute the actual 
+        # maze distance so we know if pacman is safe or not. 
         for ghost, dist in badGhosts:
             if dist < 4:
                 badGhosts.remove((ghost, dist))
                 badGhosts.add((ghost, searchAgents.mazeDistance(pos, tuple(map(int,ghost.getPosition())), currentGameState)))
 
-        distTuple = min(badGhosts, key = lambda x: x[1])
-        minManhattanBadGhost = distTuple[1]
-        meanManhattanBadGhost = float("inf")
+        minBadGhostDist = min(badGhosts, key = lambda x: x[1])[1]
 
-        fartherGhosts = map(lambda x: x[1], badGhosts)
-        fartherGhosts.remove(minManhattanBadGhost)
+        if minBadGhostDist < 4:
+            minBadGhostFeature = 1 / float(1 + minBadGhostDist)
 
-        if len(fartherGhosts) > 0:
-            meanManhattanBadGhost = sum(fartherGhosts)
 
-        if (0.5*minManhattanBadGhost <= minCapMazeDist 
-            and 0.5*minManhattanBadGhost <= minScarMazeDist
-            and 0.5*minManhattanBadGhost <= minBound):
-            if minManhattanBadGhost < 4:
-                badGhostFeature = 1 / float(1 + minManhattanBadGhost)
-            if meanManhattanBadGhost < 8:
-                badGhostFeature = 1 / float(1 + meanManhattanBadGhost)
+    # WALL FEATURE
+    # Generally safer to be near less walls because then 
+    # it's harder to get stuck between ghosts.
+    # If there are three walls around pacman, that is really dangerous!
+    wallNum = 0
 
-    ####### WALL FEATURE #################
-    numWalls = 0
     for i in [1, -1]:
-        numWalls += int(walls[pos[0]][pos[1]+i])
-        numWalls += int(walls[pos[0]+i][pos[1]])
-    wallsFeature = 1/(1+numWalls)
-    if numWalls == 3 and len(scaredGhosts) == 0:
-        wallsFeature = 60
+        wallNum += int(walls[pos[0]][pos[1]+i])
+        wallNum += int(walls[pos[0]+i][pos[1]])
+    
+    wallsFeature = 1 / float(1 + wallNum)
+    
+    if wallNum == 3 and len(scaredGhosts) == 0:
+        wallsFeature = 30
 
-    ######## GHOST SANDWICH FEATURE #########
-    # while this works right now really need to generalize and 
-    # maybe make a tad better
-    horiGhosts = 0
-    vertGhosts = 0
+
+    # Line FEATURE
+    # Generally discourage being in a line with two other ghosts
+    # because this can lead to being stuck between two ghosts.
+    lineFeature = 0
+    horiGhosts  = 0
+    vertGhosts  = 0
 
     for (ghost, dist) in badGhosts:
         horiGhosts += int(ghost.getPosition()[0] == pos[0] and dist < 4)
         vertGhosts += int(ghost.getPosition()[1] == pos[1] and dist < 4)
-    lineFeature = float(horiGhosts > 1 or vertGhosts > 1) 
+        if horiGhosts > 1 or vertGhosts > 1:
+            lineFeature = 1
+            break
+    
 
+    # WEIGHTED SUM OF FEATURES
+    # Some features are more important than others.
+    return ( 1      * winFeature
+             + 30   * goalBoundFeature
+             + 300  * capsuleFeature 
+             + 200  * scaredGhostFeature
+             - 200  * minBadGhostFeature 
+             - 40   * ghostHouseFeature 
+             - 30   * lineFeature
+             - 3    * wallsFeature
+             + random.uniform(0, 0.01) )
 
-    weightedSum = (1      * winFeature
-                   + 20   * distBoundFeature
-                   + 250  * capsuleFeature 
-                   + 100  * scaredGhostFeature
-                   - 200  * badGhostFeature 
-                   - 150  * badGhostMeanFeature 
-                   - 10   * wallsFeature
-                   - 100  * ghostHouseFeature 
-                   - 100  * lineFeature
-                   + random.uniform(0, 0.01))
-        
-    return weightedSum
 
 # Abbreviation
 better = betterEvaluationFunction
