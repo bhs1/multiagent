@@ -345,6 +345,9 @@ def betterEvaluationFunction(currentGameState):
 
     if len(badGhosts) > 0:
         badGhostDists = map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts)
+        for i in xrange(len(badGhostDists)):
+            if badGhostDists[i] < 4:
+                badGhostDists[i] = searchAgents.mazeDistance(pos, tuple(map(int,badGhosts[i].getPosition())), currentGameState)
         minManhattanBadGhost = min(badGhostDists)
         meanManhattanBadGhost = mean(badGhostDists)
         if DEBUG: print "Minimum distance to bad ghost:", minManhattanBadGhost
