@@ -338,24 +338,15 @@ def betterEvaluationFunction(currentGameState):
     scaredGhostFeature = 0
     minScarMazeDist = float("inf")
     if numScaredGhosts > 0:
-        scaredGhostDists = map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts)
-        span = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
-        scaredGhostFeature += 1 + (origNumCapsules - numCapsules - 1)*(origNumGhosts+1) + origNumGhosts - numScaredGhosts + 1/float(span)
+        scaredGhostDists = map(lambda ghost: (ghost,util.manhattanDistance(pos,ghost.getPosition())), nearbyScaredGhosts)
+        distTuple = min(scaredGhostDists, key = lambda x: x[1])
+        #span = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
+        span = searchAgents.mazeDistance(pos, tuple(map(int,distTuple[0].getPosition())), currentGameState)
         minScarMazeDist = span
+        scaredGhostFeature += 1 + (origNumCapsules - numCapsules - 1)*(origNumGhosts+1) + origNumGhosts - numScaredGhosts + 1/float(span)
     else:
         scaredGhostFeature += (origNumCapsules - numCapsules)*(origNumGhosts+1)
 
-    '''
-    scarDenom = 1 + len(capsules)*len(ghostStates) + 1*len(nearbyScaredGhosts)
-    minScarMazeDist = float("inf")
-    if len(nearbyScaredGhosts) > 0:
-        distTuple = min(map(lambda ghost: (ghost,util.manhattanDistance(pos,ghost.getPosition())), nearbyScaredGhosts), key = lambda x: x[1])
-        #span = distTuple[1]
-        span = searchAgents.mazeDistance(pos, tuple(map(int,distTuple[0].getPosition())), currentGameState)
-        minScarMazeDist = span
-        scarDenom += (1 - 1 / float(span))
-    scaredGhostFeature = 1 / float(scarDenom)
-    '''
 
     ######## CAPSULE FEATURE #############
     # should make capsule worth even more if bad ghost is close (but not too close)
@@ -369,18 +360,6 @@ def betterEvaluationFunction(currentGameState):
         minCapMazeDist = span
         capsuleFeature += (origNumCapsules - numCapsules)*(origNumGhosts+1) + 1/float(span)
     
-
-    '''
-    capDenom = 1 + (len(capsules)+1)*len(ghostStates)#*(1 / 100)
-    
-    if len(nearbyScaredGhosts) == 0 and len(capsules) > 0: 
-        distTuple = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])
-        #span = distTuple[1]
-        span = searchAgents.mazeDistance(pos, distTuple[0], currentGameState)
-        minCapMazeDist = span
-        capDenom += (1 - 1 / float(span))
-    capsuleFeature = 1 / float(capDenom)
-    '''
 
     ####### LOWER BOUND DIST TO GOAL ########
     distBoundDenom = 1 + (len(capsules)+1)*len(ghostStates)
@@ -430,11 +409,13 @@ def betterEvaluationFunction(currentGameState):
     horiGhosts = 0
     vertGhosts = 0
 
-    for ghostState in badGhosts:
-        horiGhosts += int(ghostState.getPosition()[0] == pos[0])
+    for i in xrange(len(badGhosts)):
+        ghostState = badGhosts[i]
+        ghostDist = badGhostDists[i]
+        horiGhosts += int(ghostState.getPosition()[0] == pos[0] and ghostDist < 6)
         vertGhosts += int(ghostState.getPosition()[1] == pos[1])
         if ghostState.getPosition()[1] != pos[1]: vertiLine = False
-    lineFeature = float(horiGhosts > 0 or vertGhosts > 0) 
+    lineFeature = float(horiGhosts > 1 or vertGhosts > 1) 
 
 
     weightedSum = (1      * winFeature
