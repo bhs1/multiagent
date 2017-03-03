@@ -15,6 +15,7 @@
 from util import manhattanDistance
 from game import Directions
 import random, util, itertools
+import search, searchAgents
 
 from game import Agent
 
@@ -332,7 +333,7 @@ def betterEvaluationFunction(currentGameState):
     # Move into helper function for testing death
     if (currentGameState.isLose()):
         if DEBUG: print "Score: -10000"
-        return -2000000
+        return -100000
 
 
     ######## SCORE FEATURE ##########
@@ -340,22 +341,37 @@ def betterEvaluationFunction(currentGameState):
 
     ######## BAD GHOST FEATURE #########
     badGhostFeature = 0
+    badGhostMeanFeature = 0
+
     if len(badGhosts) > 0:
-        minManhattanBadGhost = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts))
+        badGhostDists = map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), badGhosts)
+        minManhattanBadGhost = min(badGhostDists)
+        meanManhattanBadGhost = mean(badGhostDists)
         if DEBUG: print "Minimum distance to bad ghost:", minManhattanBadGhost
         if minManhattanBadGhost < 4:
-            badGhostFeature = 1 / float(minManhattanBadGhost)
+            badGhostFeature = 1 / float(1 + minManhattanBadGhost)
+        if meanManhattanBadGhost < 4:
+            badGhostFeature = 1 / float(1 + meanManhattanBadGhost)
     
 
     ######## SCARED GHOST FEATURE #########
     ####### EAT GHOST FEATURE #############
     # add in try-catch
     ######## CAPSULE FEATURE #############
-    scarDenom = 1 + len(capsules)*len(ghostStates) + len(nearbyScaredGhosts)
+    scarDenom = 1 + len(capsules)*len(ghostStates) + 1*len(nearbyScaredGhosts)
     if len(nearbyScaredGhosts) > 0:
         span = min(map(lambda ghost: manhattanDistance(pos, ghost.getPosition()), nearbyScaredGhosts))
         scarDenom += (1 - 1 / float(span))
     scaredGhostFeature = 1 / float(scarDenom)
+
+    ######## CAPSULE FEATURE #############
+    # should make capsule worth even more if bad ghost is close (but not too close)
+    capDenom = 1 + (len(capsules)+1)*len(ghostStates)#*(1 / 100)
+    if len(nearbyScaredGhosts) == 0 and len(capsules) > 0: 
+        distTuple = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])
+        span = distTuple[1]#searchAgents.mazeDistance(pos, distTuple[0], currentGameState)
+        capDenom += (1 - 1 / float(span))
+    capsuleFeature = 1 / float(capDenom)
 
 
     maxFoodFeature = 1
@@ -373,65 +389,27 @@ def betterEvaluationFunction(currentGameState):
         minFoodFeature =  1 / max(float(minDistToFood), 1.0)
 
     ####### LOWER BOUND DIST TO GOAL ########
-        distLowerBound = distHeuristic(pos, food.asList())
+        distLowerBound = distHeuristic(pos, food.asList(), currentGameState)
         if DEBUG: print "Lower bound distance to goal:", distLowerBound
         distBoundFeature =  1 / max(float(distLowerBound), 1.0)   
 
-    ######## CAPSULE FEATURE #############
-    # should make capsule worth even more if bad ghost is close (but not too close)
-    capDenom = 1 + (1 + len(capsules))*len(ghostStates)
-    if len(nearbyScaredGhosts) == 0 and len(capsules) > 0: 
-        span = min(map(lambda cap: manhattanDistance(pos, cap), capsules))
-        capDenom += (1 - 1 / float(span))
-    capsuleFeature = 1 / float(capDenom)
 
+    weightedSum = (  #0.0001     * scoreFeature 
 
-    weightedSum = (  #0.01     * scoreFeature 
+                         1 * winFeature
 
-                     1      * winFeature
-
-                     #+   1  * minFoodFeature
                      +   10 * distBoundFeature
-                     #-   100  * numFoodFeature
+                     -   0.001  * numFoodFeature
 
-                     + 400  * capsuleFeature 
+                     + 600  * capsuleFeature 
 
-                     + 200  *  scaredGhostFeature
+                     + 600  *  scaredGhostFeature
 
                      -200  * badGhostFeature 
+                     -100  * badGhostMeanFeature 
                      + random.uniform(0, 0.01)
                      )
-
-    #print "capsuleFeature", 200*capsuleFeature
-    #print "scaredGhostFeature", 200*scaredGhostFeature
-    #print "badGhostFeature", -200*badGhostFeature
         
-    if False and weightedSum > 0 and badGhostFeature > 0:
-        print "distBoundFeature", 100*distBoundFeature
-        print "capsuleFeature", 250*capsuleFeature
-        print "scaredGhostFeature", 250*scaredGhostFeature
-        print "badGhostFeature", -400*badGhostFeature
-        
-    # if you want to minimize something, return positive inverse (which feature already is)
-    # if you care more about minimizing one thing than the other multiply it by more
-
-    if DEBUG:
-        #print "Weighted Score Feature:       ", 1   * scoreFeature
-        #print ""
-        #print "Weighted Max Food Feature:    ", 20 * maxFoodFeature
-        #print "Weighted Min Food Feature:    ", 30 * minFoodFeature
-        print "Weighted Num Food Feature:    ", -1 * numFoodFeature
-        print "Weighted Lower Bound Feature: ", 100 * distBoundFeature
-        print ""
-        print "Weighted Capsule Feature:     ", 10 * capsuleFeature
-        #print "Weighted Scared Ghost Feature:", 50 * scaredGhostFeature
-        #print "Weighted Eat Ghost Feature:   ", 200 * eatGhostFeature        
-        #print ""
-        print "Weighted Bad Ghost Feature:   ", -50 * badGhostFeature
-        print ""
-        print "Total sum:                    ", weightedSum 
-        print ""
-
     return weightedSum
 
 # Abbreviation
@@ -454,7 +432,7 @@ class ContestAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
-def distHeuristic(pacPos, posList):
+def distHeuristic(pacPos, posList, gameState):
     """
     Your heuristic for the FoodSearchProblem goes here.
 
@@ -502,7 +480,7 @@ def distHeuristic(pacPos, posList):
         
     # Initialize the distance to be the distance to the closest food.
     distTuple = min(map(lambda food: (food,util.manhattanDistance(position,food)), foods), key = lambda x: x[1])
-    dist = util.
+    dist = searchAgents.mazeDistance(position, distTuple[0], gameState)
     # Kruskal's algorithm for finding minimum-cost spanning tree.
     # See pseudocode at https://en.wikipedia.org/wiki/Kruskal's_algorithm
     parent = dict()
@@ -549,3 +527,4 @@ def union(node1, node2, rank, parent):
             parent[root1] = root2
             if rank[root1] == rank[root2]:
                 rank[root2] += 1
+
