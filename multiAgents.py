@@ -401,14 +401,12 @@ def betterEvaluationFunction(currentGameState):
         wallNum += int(walls[pos[0]+i][pos[1]])
     
     wallsFeature = 1 / float(1 + wallNum)
-    
+
+    if wallNum == 2 and len(scaredGhosts) == 0:
+        wallsFeature = 3
+
     if wallNum == 3 and len(scaredGhosts) == 0:
         wallsFeature = 30
-
-    # CORNER FEATURE
-    # Don't let pacman get stuck in a corner!
-    cornerFeature = int((walls[pos[0]][pos[1]+1] or walls[pos[0]][pos[1]-1]) 
-                        and (walls[pos[0]-1][pos[1]] or walls[pos[0]+1][pos[1]]))
 
 
     # LINE FEATURE
@@ -418,8 +416,8 @@ def betterEvaluationFunction(currentGameState):
     horiVertiGhosts  = 0
 
     for (ghost, dist) in badGhosts:
-        horiVertiGhosts += int(ghost.getPosition()[0] == pos[0] and dist < 4)
-        horiVertiGhosts += int(ghost.getPosition()[1] == pos[1] and dist < 4)
+        horiVertiGhosts += int(ghost.getPosition()[0] == pos[0] and dist < 5)
+        horiVertiGhosts += int(ghost.getPosition()[1] == pos[1] and dist < 5)
         if horiVertiGhosts > 1:
             lineFeature = 1
             break
@@ -433,7 +431,6 @@ def betterEvaluationFunction(currentGameState):
              + 200  * scaredGhostFeature
              - 200  * minBadGhostFeature 
              - 50   * meanBadGhostFeature 
-             - 50   * cornerFeature 
              - 40   * ghostHouseFeature 
              - 30   * lineFeature
              - 15   * wallsFeature
