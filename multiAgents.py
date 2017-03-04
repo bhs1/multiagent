@@ -383,10 +383,10 @@ def betterEvaluationFunction(currentGameState):
         minBadGhostDist = min(badGhosts, key = lambda x: x[1])[1]
         meanBadGhostDist = mean(map(lambda x: x[1], badGhosts))
 
-        if minBadGhostDist < 4:
+        if minBadGhostDist < 3:
             minBadGhostFeature = 1 / float(1 + minBadGhostDist)
 
-        if meanBadGhostDist < 4:
+        if meanBadGhostDist < 3:
             meanBadGhostFeature = 1 / float(1 + meanBadGhostDist)
 
 
@@ -426,7 +426,7 @@ def betterEvaluationFunction(currentGameState):
              + 30   * goalBoundFeature
              + 300  * capsuleFeature 
              + 200  * scaredGhostFeature
-             - 150  * minBadGhostFeature 
+             - 200  * minBadGhostFeature 
              - 50   * meanBadGhostFeature 
              - 40   * ghostHouseFeature 
              - 30   * lineFeature
