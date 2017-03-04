@@ -386,7 +386,7 @@ def betterEvaluationFunction(currentGameState):
         if minBadGhostDist < 3:
             minBadGhostFeature = 1 / float(1 + minBadGhostDist)
 
-        if meanBadGhostDist < 3:
+        if meanBadGhostDist < 8:
             meanBadGhostFeature = 1 / float(1 + meanBadGhostDist)
 
 
@@ -403,7 +403,7 @@ def betterEvaluationFunction(currentGameState):
     wallsFeature = 1 / float(1 + wallNum)
 
     if wallNum == 2 and len(scaredGhosts) == 0:
-        wallsFeature = 3
+        wallFeature = 1
 
     if wallNum == 3 and len(scaredGhosts) == 0:
         wallsFeature = 30
