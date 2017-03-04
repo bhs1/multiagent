@@ -405,8 +405,13 @@ def betterEvaluationFunction(currentGameState):
     if wallNum == 3 and len(scaredGhosts) == 0:
         wallsFeature = 30
 
+    # CORNER FEATURE
+    # Don't let pacman get stuck in a corner!
+    cornerFeature = int((walls[pos[0]][pos[1]+1] or walls[pos[0]][pos[1]-1]) 
+                        and (walls[pos[0]-1][pos[1]] or walls[pos[0]+1][pos[1]]))
 
-    # Line FEATURE
+
+    # LINE FEATURE
     # Generally discourage being in a line with two other ghosts
     # because this can lead to being stuck between two ghosts.
     lineFeature = 0
@@ -428,9 +433,10 @@ def betterEvaluationFunction(currentGameState):
              + 200  * scaredGhostFeature
              - 200  * minBadGhostFeature 
              - 50   * meanBadGhostFeature 
+             - 50   * cornerFeature 
              - 40   * ghostHouseFeature 
              - 30   * lineFeature
-             - 3    * wallsFeature
+             - 15   * wallsFeature
              + random.uniform(0, 0.01) )
 
 
