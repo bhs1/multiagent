@@ -426,8 +426,8 @@ def betterEvaluationFunction(currentGameState):
              + 30   * goalBoundFeature
              + 300  * capsuleFeature 
              + 200  * scaredGhostFeature
-             - 200  * minBadGhostFeature 
-             - 100   * meanBadGhostFeature 
+             - 150  * minBadGhostFeature 
+             - 50   * meanBadGhostFeature 
              - 40   * ghostHouseFeature 
              - 30   * lineFeature
              - 3    * wallsFeature
