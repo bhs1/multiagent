@@ -327,16 +327,14 @@ def betterEvaluationFunction(currentGameState):
     # This feature is intimiately related to the capsule feature 
     # as it should be incentivised to finish eating the available
     # scared ghosts before eating another capsule.
-    scaredGhostFeature = 0
+    scaredGhostFeature = (origCapNum - capNum) * (origGhostNum + 1)
     minScaredGhostDist = float("inf")
     
     if scaredGhostNum > 0:
         minScaredGhostPos   = tuple(map(int, min(scaredGhosts, key = lambda x: x[1])[0].getPosition()))
         minScaredGhostDist  = searchAgents.mazeDistance(pos, minScaredGhostPos, currentGameState)
-        scaredGhostFeature += origGhostNum - scaredGhostNum + 1/float(minScaredGhostDist)
+        scaredGhostFeature +=  1 / float(minScaredGhostDist) - scaredGhostNum
 
-    elif capNum > 0:
-        scaredGhostFeature += (origCapNum - capNum) * (origGhostNum + 1)
 
 
     # CAPSULE FEATURE
@@ -348,12 +346,12 @@ def betterEvaluationFunction(currentGameState):
     minCapsuleDist = float("inf")
 
     if scaredGhostNum > 0:
-        capsuleFeature = 1 + (origCapNum - capNum - 1) * (origGhostNum + 1)
+        capsuleFeature += 1 + (origCapNum - capNum - 1) * (origGhostNum + 1)
 
     elif capNum > 0:
         minCapsulePos  = min(map(lambda cap: (cap,util.manhattanDistance(pos,cap)), capsules), key = lambda x: x[1])[0]
         minCapsuleDist = searchAgents.mazeDistance(pos, minCapsulePos, currentGameState)
-        capsuleFeature =  1/float(minCapsuleDist) + (origCapNum - capNum) * (origGhostNum + 1)
+        capsuleFeature +=  1/float(minCapsuleDist) + (origCapNum - capNum) * (origGhostNum + 1)
 
 
     # GOAL BOUND FEATURE
@@ -372,19 +370,24 @@ def betterEvaluationFunction(currentGameState):
     # BAD GHOST FEATURE
     # Bad ghosts are bad, run away!
     minBadGhostFeature = 0
+    meanBadGhostFeature = 0
 
     if len(badGhosts) > 0:
         # If a ghost is really close, take the time to compute the actual 
         # maze distance so we know if pacman is safe or not. 
         for ghost, dist in badGhosts:
-            if dist < 4:
+            if dist < 3:
                 badGhosts.remove((ghost, dist))
                 badGhosts.add((ghost, searchAgents.mazeDistance(pos, tuple(map(int,ghost.getPosition())), currentGameState)))
 
         minBadGhostDist = min(badGhosts, key = lambda x: x[1])[1]
+        meanBadGhostDist = mean(map(lambda x: x[1], badGhosts))
 
         if minBadGhostDist < 4:
             minBadGhostFeature = 1 / float(1 + minBadGhostDist)
+
+        if meanBadGhostDist < 4:
+            meanBadGhostFeature = 1 / float(1 + meanBadGhostDist)
 
 
     # WALL FEATURE
@@ -407,13 +410,12 @@ def betterEvaluationFunction(currentGameState):
     # Generally discourage being in a line with two other ghosts
     # because this can lead to being stuck between two ghosts.
     lineFeature = 0
-    horiGhosts  = 0
-    vertGhosts  = 0
+    horiVertiGhosts  = 0
 
     for (ghost, dist) in badGhosts:
-        horiGhosts += int(ghost.getPosition()[0] == pos[0] and dist < 4)
-        vertGhosts += int(ghost.getPosition()[1] == pos[1] and dist < 4)
-        if horiGhosts > 1 or vertGhosts > 1:
+        horiVertiGhosts += int(ghost.getPosition()[0] == pos[0] and dist < 4)
+        horiVertiGhosts += int(ghost.getPosition()[1] == pos[1] and dist < 4)
+        if horiVertiGhosts > 1:
             lineFeature = 1
             break
     
@@ -425,6 +427,7 @@ def betterEvaluationFunction(currentGameState):
              + 300  * capsuleFeature 
              + 200  * scaredGhostFeature
              - 200  * minBadGhostFeature 
+             - 100   * meanBadGhostFeature 
              - 40   * ghostHouseFeature 
              - 30   * lineFeature
              - 3    * wallsFeature
